@@ -101,3 +101,22 @@ reproduire).
 > données de mises réelles — la FDJ ne publie pas la répartition des grilles jouées.
 > C'est une estimation, et elle ne change **pas** la probabilité de gagner : l'espérance
 > de gain reste négative.
+
+## Rentabilité : `rentabilite.py`
+
+Répond à « à partir de combien de grilles suis-je sûr de rembourser ma mise ? ».
+Réponse : aucun nombre. Le script le montre de trois façons — espérance par grille,
+probabilité de bénéfice en fonction du nombre de grilles, et coût de la couverture
+intégrale des 139 838 160 combinaisons.
+
+```bash
+python3 rentabilite.py --jackpot 98e6
+```
+
+Résultat central : l'espérance est de **48,6 % de la mise**, mais le résultat **médian**
+est de **−82 %**. L'écart vient du jackpot, qui tire la moyenne vers le haut sans jamais
+tomber. Jouer plus de grilles ne rapproche pas du remboursement : ça rend la perte
+moyenne plus certaine.
+
+> Les gains des rangs 2 à 13 sont indicatifs — ces rangs sont pari-mutuel, le montant
+> réel dépend du nombre de gagnants à chaque tirage.

@@ -68,3 +68,36 @@ python3 analyse_euromillions.py results.csv --annees 4
 > Le format actuel (5 numéros sur 50 + 2 étoiles sur 12) date de septembre 2016. Une analyse
 > sur un historique plus long doit être coupée à cette date, sinon les fréquences des étoiles
 > 11 et 12 sont mécaniquement sous-estimées.
+
+## Choisir une grille : `choix_grille.py`
+
+Aucune grille n'a plus de chances de sortir qu'une autre. Le seul levier réel est le
+**partage du gain** : les joueurs ne cochent pas au hasard, donc certaines grilles sont
+jouées par des milliers de personnes et d'autres par presque personne.
+
+`choix_grille.py` énumère les 2 118 760 combinaisons de 5 boules, leur attribue un score
+de popularité estimée et tire au sort une grille parmi les moins populaires :
+
+| Critère | Effet |
+|---|---|
+| Numéro ≤ 31 (jour de naissance) | +3 — le biais le plus massif |
+| Numéro ≤ 12 (mois) | +1 supplémentaire |
+| Porte-bonheur (3, 7, 9, 11, 13, 17, 21, 23, 27) | +2 |
+| Numéro « chaud » des 4 dernières années | +1,5 — les tableaux de fréquences sont publics |
+| 4+ numéros alignés sur le bulletin | +3 par numéro excédentaire |
+| Suite arithmétique complète | +8 |
+| Paire de numéros consécutifs | **−1,5** — les joueurs les évitent |
+| 1 ou 50 (bords du bulletin) | −0,5 |
+
+```bash
+python3 choix_grille.py --grilles 5
+```
+
+196 grilles atteignent le score minimal : à l'intérieur de cet ensemble le choix est
+arbitraire, le script y tire au sort (entropie système par défaut, `--graine` pour
+reproduire).
+
+> Les poids viennent de régularités documentées du comportement des joueurs, pas de
+> données de mises réelles — la FDJ ne publie pas la répartition des grilles jouées.
+> C'est une estimation, et elle ne change **pas** la probabilité de gagner : l'espérance
+> de gain reste négative.

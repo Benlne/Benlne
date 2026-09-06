@@ -1,0 +1,8 @@
+{
+  "tirage": "2026-09-08",
+  "jour": "mardi",
+  "boules": [39, 40, 43, 46, 50],
+  "etoiles": [10, 11],
+  "mise_eur": 2.50,
+  "commentaire": "Grille issue de choix_grille.py (minimisation du risque de partage). Le code My Million n'est volontairement pas stocke ici : c'est un identifiant de ticket, il n'a rien a faire dans un depot."
+}

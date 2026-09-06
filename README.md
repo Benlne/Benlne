@@ -120,3 +120,16 @@ moyenne plus certaine.
 
 > Les gains des rangs 2 à 13 sont indicatifs — ces rangs sont pari-mutuel, le montant
 > réel dépend du nombre de gagnants à chaque tirage.
+
+## Vérifier un tirage : `verifier.py`
+
+```bash
+python3 verifier.py --tirage 11,12,19,27,46 --etoiles 4,12
+```
+
+Compare le tirage à la grille enregistrée dans `ma_grille.json` et annonce le rang de
+gain atteint (ou l'absence de gain). Une autre grille se teste avec `--grille` et
+`--mes-etoiles`.
+
+> `ma_grille.json` ne contient **pas** le code My Million : c'est un identifiant de
+> ticket, il n'a rien à faire dans un dépôt.

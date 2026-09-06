@@ -29,9 +29,15 @@ from analyse_euromillions import (
 # Numeros surjoues pour raisons superstitieuses ou culturelles.
 PORTE_BONHEUR = {3, 7, 9, 11, 13, 17, 21, 23, 27}
 
-# Le bulletin FDJ presente les 50 numeros en 5 lignes de 10.
-ligne = lambda n: (n - 1) // 10
-colonne = lambda n: (n - 1) % 10
+# L'appli FDJ presente les 50 numeros en 8 colonnes (1-8, 9-16, 17-24, ...),
+# soit 7 lignes dont la derniere incomplete. C'est cette geometrie-la que l'oeil
+# du joueur voit, donc c'est elle qui definit un "motif" coche.
+LARGEUR_BULLETIN = 8
+ligne = lambda n: (n - 1) // LARGEUR_BULLETIN
+colonne = lambda n: (n - 1) % LARGEUR_BULLETIN
+
+# La notion de dizaine est independante de la mise en page du bulletin.
+dizaine = lambda n: (n - 1) // 10
 
 
 def score_popularite(grille: tuple[int, ...], chauds: set[int]) -> float:
@@ -66,7 +72,7 @@ def score_popularite(grille: tuple[int, ...], chauds: set[int]) -> float:
         s += 8.0
 
     # 6. Grille entierement dans la meme dizaine.
-    if len({ligne(n) for n in grille}) == 1:
+    if len({dizaine(n) for n in grille}) == 1:
         s += 4.0
 
     # 7. Numeros consecutifs : les joueurs les EVITENT (ils les jugent

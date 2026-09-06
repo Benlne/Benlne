@@ -84,7 +84,7 @@ de popularité estimée et tire au sort une grille parmi les moins populaires :
 | Numéro ≤ 12 (mois) | +1 supplémentaire |
 | Porte-bonheur (3, 7, 9, 11, 13, 17, 21, 23, 27) | +2 |
 | Numéro « chaud » des 4 dernières années | +1,5 — les tableaux de fréquences sont publics |
-| 4+ numéros alignés sur le bulletin | +3 par numéro excédentaire |
+| 4+ numéros alignés sur le bulletin (8 colonnes, mise en page FDJ) | +3 par numéro excédentaire |
 | Suite arithmétique complète | +8 |
 | Paire de numéros consécutifs | **−1,5** — les joueurs les évitent |
 | 1 ou 50 (bords du bulletin) | −0,5 |
@@ -93,7 +93,7 @@ de popularité estimée et tire au sort une grille parmi les moins populaires :
 python3 choix_grille.py --grilles 5
 ```
 
-196 grilles atteignent le score minimal : à l'intérieur de cet ensemble le choix est
+237 grilles atteignent le score minimal : à l'intérieur de cet ensemble le choix est
 arbitraire, le script y tire au sort (entropie système par défaut, `--graine` pour
 reproduire).
 

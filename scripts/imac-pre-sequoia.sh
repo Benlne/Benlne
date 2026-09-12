@@ -57,22 +57,70 @@ else
   orange "Volume 'Sequoia' pas encore créé — étape 2 du runbook (Utilitaire de disque)"
 fi
 
-titre "Clé USB pour l'installeur"
-trouve=0
+titre "Disques externes branchés"
+# Deux besoins distincts et incompatibles : un support a effacer pour l'installeur
+# Sequoia, et un disque a conserver pour la sauvegarde Time Machine. Ce bloc
+# decrit ce qui est branche, il ne designe rien comme "effaçable".
+candidat_installeur=0
+disque_sauvegarde=0
+externes=0
 while IFS= read -r disque; do
   [ -z "$disque" ] && continue
-  taille=$(diskutil info "$disque" 2>/dev/null | awk '/Disk Size/ {print $3, $4; exit}')
-  octets=$(diskutil info "$disque" 2>/dev/null | awk '/Disk Size/ {print $5; exit}' | tr -d '(')
-  nom=$(diskutil info "$disque" 2>/dev/null | awk -F': *' '/Device \/ Media Name/ {print $2; exit}')
-  printf '  %s — %s — %s\n' "$disque" "${nom:-?}" "${taille:-?}"
-  if [ "${octets:-0}" -ge 15000000000 ] 2>/dev/null; then trouve=1; fi
+  externes=$((externes + 1))
+  info=$(diskutil info "$disque" 2>/dev/null)
+  taille=$(printf '%s' "$info" | awk '/Disk Size/ {print $3, $4; exit}')
+  octets=$(printf '%s' "$info" | awk '/Disk Size/ {print $5; exit}' | tr -d '(')
+  nom=$(printf '%s' "$info" | awk -F': *' '/Device \/ Media Name/ {print $2; exit}')
+  ssd=$(printf '%s' "$info" | awk -F': *' '/Solid State/ {print $2; exit}')
+  case "$ssd" in
+    Yes) type="SSD ou clé" ;;
+    No)  type="disque mécanique" ;;
+    *)   type="type inconnu" ;;
+  esac
+  printf '  %s — %s — %s — %s\n' "$disque" "${nom:-?}" "${taille:-?}" "$type"
+
+  # Volumes montés de ce disque, avec leur occupation : un disque qui contient
+  # des données n'est pas un candidat pour l'installeur.
+  occupe=0
+  while IFS= read -r montage; do
+    [ -z "$montage" ] && continue
+    ligne=$(df -h "$montage" 2>/dev/null | awk 'NR==2 {print $3" utilisés sur "$2}')
+    printf '      volume %-28s %s\n' "$(basename "$montage")" "$ligne"
+    if [ -d "$montage/Backups.backupdb" ] || printf '%s' "$montage" | grep -qi "time.*machine"; then
+      printf '      %s\n' "^ sauvegarde Time Machine existante"
+      disque_sauvegarde=1
+    fi
+    utilise_ko=$(df -k "$montage" 2>/dev/null | awk 'NR==2 {print $3}')
+    [ "${utilise_ko:-0}" -gt 1048576 ] 2>/dev/null && occupe=1
+  done <<VOLUMES
+$(diskutil list "$disque" 2>/dev/null | awk '/\/Volumes\// {sub(/.*\/Volumes\//, "/Volumes/"); print}')
+VOLUMES
+
+  if [ "${octets:-0}" -ge 15000000000 ] 2>/dev/null; then
+    if [ "$occupe" -eq 1 ]; then
+      printf '      %s\n' "contient des données : à conserver, pas à transformer en installeur"
+      disque_sauvegarde=1
+    else
+      candidat_installeur=1
+    fi
+  fi
 done <<EOF
 $(diskutil list external physical 2>/dev/null | awk '/^\/dev\/disk/ {print $1}')
 EOF
-if [ "$trouve" -eq 1 ]; then
-  vert "Un disque externe d'au moins 15 Go est branché (son contenu sera effacé)"
+
+if [ "$externes" -eq 0 ]; then
+  orange "Aucun disque externe branché — il en faut deux rôles : un support de 16 Go à effacer pour l'installeur, et de préférence un disque pour Time Machine"
 else
-  orange "Aucune clé USB de 16 Go détectée — la brancher avant l'étape 4"
+  if [ "$candidat_installeur" -eq 1 ]; then
+    vert "Un support d'au moins 16 Go et vide peut servir d'installeur"
+  else
+    orange "Aucun support vide de 16 Go : ne PAS effacer un disque qui contient des données, brancher une clé dédiée"
+  fi
+  if [ "$disque_sauvegarde" -eq 1 ]; then
+    vert "Un disque externe avec des données est branché : candidat pour la sauvegarde Time Machine"
+  else
+    orange "Pas de disque identifié pour Time Machine — la sauvegarde reste le meilleur filet avant de toucher au système"
+  fi
 fi
 
 titre "Outils"

@@ -29,6 +29,15 @@ Périphériques : un Hitachi 1 To externe (le disque d'origine de la machine, en
 313 Go occupés dont 268 dans `Users`), et un NAS en SMB
 (`smb://NasDom._smb._tcp.local/homes`).
 
+## Passation entre surfaces
+
+La conversation vit dans une session Claude Code **web**, sans route vers le réseau de la
+maison ; les mains sont dans une session **locale** sur le MacBook Air, qui a le NAS et l'iMac
+en SSH mais ne voit pas ce fil. Les deux ne communiquent que par ce dépôt.
+
+**[`docs/passation.md`](docs/passation.md) porte l'état exact, les décisions prises et les
+commandes à enchaîner.** C'est le premier fichier à lire pour reprendre le travail.
+
 ## Où on en est
 
 Fait : réglages d'énergie 24/7 appliqués, Command Line Tools installés, vérifications

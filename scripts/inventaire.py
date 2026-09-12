@@ -11,8 +11,13 @@ vraiment : "ou est ce fichier ?" et "qu'est-ce que j'ai en double ?".
     # 2. Chercher
     python3 inventaire.py chercher "facture" 
 
-    # 3. Trouver les doublons (lit le contenu, donc plus lent)
-    python3 inventaire.py doublons
+    # 3. Ce qui n'existe QUE sur le vieux disque : la liste a copier
+    python3 inventaire.py manquants imac-2013 --reference nas imac-actuel \\
+        --racine "/Volumes/Macintosh HD/Users" --liste-rsync ~/a-copier.txt
+
+    # 4. Doublons. --rapide compare taille et nom sans lire le contenu ;
+    #    sans lui, le contenu est verifie, ce qui est sur mais lent en reseau.
+    python3 inventaire.py doublons --rapide
 
 Les index sont des fichiers TSV dans ~/Inventaire, lisibles avec n'importe quel
 tableur. Rien n'est jamais supprime par ce script.
@@ -135,6 +140,70 @@ def chercher(motif: str) -> int:
     return 0
 
 
+def cle(taille: int, chemin: str) -> tuple[int, str]:
+    """Identite approchee d'un fichier : sa taille et son nom.
+
+    Deux fichiers de meme taille et de meme nom sont le meme fichier dans
+    l'immense majorite des cas, et cette comparaison ne lit aucun contenu — ce
+    qui compte quand la reference est un NAS au bout du Wi-Fi.
+    """
+    return (taille, os.path.basename(chemin).lower())
+
+
+def manquants(source: str, references: list[str], racine: str | None,
+              liste_rsync: str | None, taille_mini: int) -> int:
+    lignes = charger()
+    sources = [l for l in lignes if l[3] == source]
+    if not sources:
+        print(f"Aucun index nommé « {source} ». Voir : inventaire.py liste", file=sys.stderr)
+        return 1
+
+    connues = {cle(l[0], l[2]) for l in lignes if l[3] in references}
+    if not connues:
+        print(f"Aucun index parmi {references}. Voir : inventaire.py liste", file=sys.stderr)
+        return 1
+
+    absents = [l for l in sources if l[0] >= taille_mini and cle(l[0], l[2]) not in connues]
+    volume_total = sum(l[0] for l in sources if l[0] >= taille_mini)
+    volume_absent = sum(l[0] for l in absents)
+
+    print(f"Source     : {source} — {len(sources)} fichiers, {humain(volume_total)} au-dessus du seuil")
+    print(f"Références : {', '.join(references)}")
+    print(f"\nAbsents des références : {len(absents)} fichiers, {humain(volume_absent)}")
+    print(f"Déjà ailleurs          : {humain(volume_total - volume_absent)} — inutile de les copier\n")
+
+    absents.sort(key=lambda l: -l[0])
+    for taille, mtime, chemin, _ in absents[:40]:
+        date = time.strftime("%Y-%m-%d", time.localtime(mtime))
+        print(f"  {humain(taille):>10}  {date}  {chemin}")
+    if len(absents) > 40:
+        print(f"  … et {len(absents) - 40} autres.")
+
+    if liste_rsync:
+        if not racine:
+            print("\n--liste-rsync exige --racine (le dossier source du futur rsync).",
+                  file=sys.stderr)
+            return 1
+        prefixe = racine.rstrip("/") + "/"
+        hors = 0
+        with open(os.path.expanduser(liste_rsync), "w", encoding="utf-8") as f:
+            for _, _, chemin, _ in absents:
+                if chemin.startswith(prefixe):
+                    f.write(chemin[len(prefixe):] + "\n")
+                else:
+                    hors += 1
+        print(f"\nListe écrite : {liste_rsync}")
+        if hors:
+            print(f"  ({hors} fichiers hors de {racine}, non listés)")
+        print("À copier avec :")
+        print(f'  bash copie-vers-nas.sh --liste "{liste_rsync}" \\')
+        print(f'      "{racine}" "/Volumes/homes/benjamin/Save disque imac"')
+
+    print("\nComparaison par taille et par nom, sans lecture du contenu. Pour lever un")
+    print("doute sur un fichier précis, « doublons » vérifie le contenu.")
+    return 0
+
+
 def empreinte(chemin: str) -> str | None:
     h = hashlib.blake2b(digest_size=16)
     try:
@@ -146,11 +215,35 @@ def empreinte(chemin: str) -> str | None:
     return h.hexdigest()
 
 
-def doublons(taille_mini: int) -> int:
+def doublons(taille_mini: int, rapide: bool) -> int:
     lignes = [l for l in charger() if l[0] >= taille_mini]
     if not lignes:
         print("Aucun fichier au-dessus du seuil dans les index.")
         return 1
+
+    if rapide:
+        # Sans lecture du contenu : taille et nom suffisent a reperer ce qui a
+        # deja ete sauvegarde ailleurs, et evitent de relire des centaines de
+        # gigaoctets a travers le reseau.
+        par_cle: dict[tuple[int, str], list[tuple[int, int, str, str]]] = defaultdict(list)
+        for l in lignes:
+            par_cle[cle(l[0], l[2])].append(l)
+        groupes = [g for g in par_cle.values() if len(g) > 1]
+        if not groupes:
+            print("Aucun doublon apparent.")
+            return 0
+        groupes.sort(key=lambda g: -g[0][0] * (len(g) - 1))
+        gaspille = sum(g[0][0] * (len(g) - 1) for g in groupes)
+        print(f"{len(groupes)} groupes de doublons apparents — {humain(gaspille)} récupérables")
+        print("(comparaison par taille et nom, sans lecture du contenu)\n")
+        for g in groupes[:40]:
+            print(f"{humain(g[0][0])} × {len(g)} exemplaires :")
+            for _, _, chemin, source in g:
+                print(f"    [{source}] {chemin}")
+            print()
+        if len(groupes) > 40:
+            print(f"… et {len(groupes) - 40} autres groupes.")
+        return 0
 
     # Deux fichiers de tailles differentes ne sont jamais identiques : on ne lit
     # le contenu que des candidats, ce qui evite de hacher tout l'inventaire.
@@ -206,7 +299,18 @@ def main() -> int:
     p = sous.add_parser("chercher", help="retrouver un fichier par son nom")
     p.add_argument("motif")
 
+    p = sous.add_parser("manquants", help="ce qui n'existe que dans une source")
+    p.add_argument("source", help="index à trier, ex. imac-2013")
+    p.add_argument("--reference", nargs="+", required=True,
+                   help="index où le fichier est déjà en sécurité, ex. nas")
+    p.add_argument("--racine", help="dossier source du futur rsync, pour --liste-rsync")
+    p.add_argument("--liste-rsync", help="écrire la liste des fichiers à copier ici")
+    p.add_argument("--taille-mini", type=int, default=TAILLE_MINI_DOUBLON,
+                   help="ignorer les fichiers plus petits (octets)")
+
     p = sous.add_parser("doublons", help="fichiers présents en plusieurs exemplaires")
+    p.add_argument("--rapide", action="store_true",
+                   help="comparer taille et nom sans lire le contenu")
     p.add_argument("--taille-mini", type=int, default=TAILLE_MINI_DOUBLON,
                    help="ignorer les fichiers plus petits (octets)")
 
@@ -217,7 +321,10 @@ def main() -> int:
         return liste()
     if args.commande == "chercher":
         return chercher(args.motif)
-    return doublons(args.taille_mini)
+    if args.commande == "manquants":
+        return manquants(args.source, args.reference, args.racine,
+                         args.liste_rsync, args.taille_mini)
+    return doublons(args.taille_mini, args.rapide)
 
 
 if __name__ == "__main__":

@@ -113,11 +113,27 @@ l'archive ne sert plus que de filet.
 Savoir ce qui existe suppose un index, pas une mémoire. `scripts/inventaire.py` le construit :
 
 ```bash
+# indexer chaque source (rapide : ne lit pas le contenu des fichiers)
 python3 inventaire.py scan "/Volumes/Macintosh HD/Users" --nom imac-2013
 python3 inventaire.py scan "/Volumes/homes/benjamin" --nom nas
+python3 inventaire.py scan ~ --nom imac-actuel
+
+# ce qui n'existe QUE sur le vieux disque, et la liste à copier
+python3 inventaire.py manquants imac-2013 --reference nas imac-actuel \
+    --racine "/Volumes/Macintosh HD/Users" --liste-rsync ~/a-copier.txt
+
+# puis ne copier que cela
+bash copie-vers-nas.sh --liste ~/a-copier.txt \
+    "/Volumes/Macintosh HD/Users" "/Volumes/homes/benjamin/Save disque imac"
+
 python3 inventaire.py chercher "facture"
-python3 inventaire.py doublons
+python3 inventaire.py doublons --rapide
 ```
+
+`manquants` est la commande qui décide : elle compare par taille et par nom, sans lire aucun
+contenu, et produit directement la liste que `rsync` consomme. Ce qui est déjà en sécurité
+ailleurs ne traverse jamais le réseau — sur 268 Go venus d'une machine dont une partie a déjà
+été sauvegardée, c'est la différence entre une soirée et un quart d'heure.
 
 Il produit des TSV dans `~/Inventaire`, lisibles dans un tableur. Le scan ne lit pas le contenu
 des fichiers, il est donc rapide ; la recherche de doublons ne lit que les fichiers qui ont

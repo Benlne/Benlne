@@ -8,6 +8,11 @@
 # Usage :
 #   bash copie-vers-nas.sh "/Volumes/Disque/Users/tonton" "/Volumes/homes/benjamin/Save disque imac"
 #   bash copie-vers-nas.sh --taille "/Volumes/Disque"        # pèse seulement, ne copie rien
+#   bash copie-vers-nas.sh --liste ~/a-copier.txt "/Volumes/Disque/Users" "/Volumes/homes/..."
+#
+# --liste attend un fichier de chemins RELATIFS à la source, tel que produit par
+# « inventaire.py manquants --liste-rsync » : seuls ces fichiers sont copiés, et
+# ce qui existe déjà ailleurs ne traverse jamais le réseau.
 
 set -u
 
@@ -22,6 +27,13 @@ if [ "${1:-}" = "--taille" ]; then
   exit 0
 fi
 
+liste=""
+if [ "${1:-}" = "--liste" ]; then
+  liste="${2:-}"
+  shift 2
+  [ -f "$liste" ] || { echo "Liste introuvable : $liste" >&2; exit 1; }
+fi
+
 source="${1:-}"
 destination="${2:-}"
 
@@ -30,6 +42,12 @@ if [ -z "$source" ] || [ -z "$destination" ]; then
   echo "        bash copie-vers-nas.sh --taille \"<source>\"" >&2
   exit 1
 fi
+
+command -v rsync >/dev/null 2>&1 || {
+  echo "rsync est introuvable. Il est fourni avec macOS ; si la commande manque," >&2
+  echo "installer les Command Line Tools : xcode-select --install" >&2
+  exit 1
+}
 
 [ -d "$source" ] || { echo "Source introuvable : $source" >&2; exit 1; }
 if [ ! -d "$destination" ]; then
@@ -41,8 +59,12 @@ fi
 
 echo "Source      : $source"
 echo "Destination : $destination"
-echo "Volume à transférer :"
-du -sh "$source" 2>/dev/null | sed 's/^/  /'
+if [ -n "$liste" ]; then
+  echo "Liste       : $liste ($(grep -c . "$liste") fichiers)"
+else
+  echo "Volume à transférer :"
+  du -sh "$source" 2>/dev/null | sed 's/^/  /'
+fi
 echo
 echo "Espace libre à destination :"
 df -h "$destination" 2>/dev/null | awk 'NR==2 {print "  "$4" disponibles"}'
@@ -53,7 +75,10 @@ echo
 # rsync échouerait sur chaque fichier.
 # --partial reprend un fichier interrompu, ce qui compte en Wi-Fi.
 # caffeinate empêche la mise en veille pendant la copie.
-caffeinate -i rsync -rlt --partial --progress -v \
+[ -n "$liste" ] && option_liste="--files-from=$liste" || option_liste=""
+
+# shellcheck disable=SC2086
+caffeinate -i rsync -rlt --partial --progress -v $option_liste \
   --exclude '.Spotlight-V100' \
   --exclude '.fseventsd' \
   --exclude '.Trashes' \

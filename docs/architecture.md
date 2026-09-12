@@ -1,0 +1,116 @@
+# Architecture : où vit quoi
+
+Note d'architecture pour le poste de travail personnel permanent. Elle répond à une intention :
+pouvoir agir sur les projets perso depuis n'importe où — iPhone, MacBook Air, PC du bureau — et
+disposer d'une machine à demeure qu'un agent peut piloter.
+
+## 1. Le centre n'est pas la machine, c'est le dépôt
+
+L'intuition naturelle est de faire de l'iMac le centre de gravité : tout y vit, on s'y connecte
+de partout. C'est une erreur de conception, pour une raison simple : **une machine de 2013,
+en Wi-Fi, sous un macOS rustiné, ne peut pas être une dépendance dure**. Un disque qui lâche,
+une mise à jour qui casse les patches OpenCore, une coupure de courant pendant les vacances, et
+tout devient inaccessible.
+
+Le centre, c'est **GitHub**. Un dépôt par projet, et c'est lui qui rend un projet joignable de
+partout, par n'importe quel agent, que l'iMac soit allumé ou non.
+
+L'iMac devient alors ce qu'il doit être : **un environnement d'exécution parmi deux**, celui qui
+sait faire ce que le cloud ne sait pas.
+
+> **Le test de conception** : si l'iMac meurt cette nuit, qu'est-ce qui est perdu ?
+> La bonne réponse est « une après-midi de réinstallation, rien d'autre ». Tant que c'est vrai,
+> l'architecture est saine. Dès qu'un projet ne vit que sur l'iMac, elle ne l'est plus.
+
+## 2. Répartition des rôles
+
+| | Sessions cloud (claude.ai/code) | iMac |
+|---|---|---|
+| Joignable depuis | n'importe quel navigateur, sans rien installer | Tailscale ou réseau local |
+| Disponibilité | toujours | dépend d'une machine de 13 ans |
+| État entre deux sessions | aucun, conteneur neuf à chaque fois | **permanent** |
+| Accès au NAS et au réseau local | non | **oui** |
+| Processus longs, services, tâches planifiées | non | **oui** |
+| Données qui ne doivent pas sortir de la maison | non | **oui** |
+| Coût du calcul | facturé au plan | gratuit, la machine tourne déjà |
+
+**Règle d'usage** : tout ce qui est « lire et modifier un dépôt » se fait en session cloud, y
+compris depuis l'iPhone. L'iMac sert à ce que cette liste-là ne couvre pas.
+
+## 3. Ce que l'iMac apporte vraiment
+
+C'est la partie « un ordinateur à disposition de l'agent », et elle a quatre usages concrets :
+
+1. **La mémoire longue.** Bases de données locales, caches, historiques, gros fichiers de
+   travail qui n'ont pas leur place dans un dépôt git.
+2. **Les tâches planifiées sans humain devant.** Claude Code en mode non interactif
+   (`claude -p "..."`) dans une tâche planifiée : la nuit, il tire les dépôts, lance les tests,
+   ouvre une pull request quand quelque chose casse. C'est ça, l'agent avec une machine.
+3. **Le réseau local.** Le NAS, les fichiers de la maison, les services internes — inaccessibles
+   depuis un conteneur cloud, triviaux depuis l'iMac.
+4. **Les données qui ne doivent pas quitter la maison.** Tout traitement sensible s'exécute ici
+   et n'en sort pas.
+
+Ce que l'iMac ne fera pas : modèles de langage en local (pas de GPU exploitable, 16 Go non
+extensibles), compilations très lourdes, et tout ce qui exige Windows.
+
+## 4. Les trois chemins d'accès
+
+| D'où | Comment | Pour quoi |
+|---|---|---|
+| **iPhone** | claude.ai/code dans le navigateur | Le quotidien. Lancer une tâche sur un dépôt, relire, valider une PR. Taper dans un terminal SSH sur un écran de téléphone est une fausse bonne idée |
+| **MacBook Air** | Claude Desktop → environnement **SSH** vers l'iMac | Le mode le plus complet : les sessions s'exécutent sur l'iMac, avec ses fichiers et son réseau, l'interface est en local |
+| **PC du bureau** | claude.ai/code | Rien à installer, rien à configurer sur une machine qui ne t'appartient pas. Ne jamais y poser de clé SSH |
+| **En direct** | clavier et écran de l'iMac | L'installation, le dépannage, les manipulations de disque |
+
+Le fil entre les trois reste le dépôt : ce qui n'est pas commité n'existe pas pour les autres
+chemins.
+
+## 5. Réseau et sécurité
+
+- **Tailscale**, jamais de redirection de port sur la box. L'iMac reçoit une adresse stable
+  joignable depuis l'iPhone et le MacBook, sans rien exposer sur Internet. En prime, le NAS
+  devient joignable de l'extérieur par le même canal.
+- **SSH par clé publique uniquement**, authentification par mot de passe refusée.
+- **Rien sur le PC du bureau** : pas de clé SSH, pas de Tailscale, pas de session authentifiée
+  qui survive. Le navigateur suffit.
+- **Les secrets ne sont jamais dans un dépôt.** Fichier local hors dépôt, chargé par
+  l'environnement. Le dépôt est public.
+- **Un compte dédié** à l'agent, distinct du compte administrateur quotidien, avec seulement
+  les partages NAS dont il a besoin.
+
+## 6. Le Mac mini est déjà dans le plan
+
+L'iMac est explicitement provisoire. La contrainte à respecter dès maintenant : **tout ce qui
+est fait sur l'iMac doit être rejouable ailleurs**. D'où la forme de ce dépôt — des scripts et
+des procédures écrites, pas des réglages cliqués et oubliés.
+
+Le jour du Mac mini, la migration doit tenir en : cloner ce dépôt, lancer les scripts, se
+connecter. Si elle demande plus, c'est qu'un réglage a été fait à la main sans être écrit. Toute
+manipulation manuelle non documentée est une dette payable ce jour-là.
+
+## 7. Organisation des projets
+
+```
+~/Projets/
+  baluchon/      ← un dépôt GitHub, cloné
+  tmnh/          ← un dépôt GitHub, cloné
+  benlne/        ← ce dépôt : machine, procédures, index des projets
+```
+
+Un `CLAUDE.md` par projet : c'est ce qui donne le même contexte à une session cloud lancée
+depuis l'iPhone et à une session locale sur l'iMac. C'est la seule mémoire réellement partagée
+entre les chemins d'accès — les conversations, elles, ne se rejoignent pas.
+
+## 8. Ce que cela ajoute à la feuille de route
+
+Au-delà de l'installation de Sequoia et des réglages 24/7 :
+
+- [ ] Tailscale sur l'iMac, l'iPhone et le MacBook Air
+- [ ] Compte dédié à l'agent
+- [ ] `~/Projets` et clonage des dépôts existants
+- [ ] Un `CLAUDE.md` par projet
+- [ ] Une première tâche planifiée en `claude -p` pour valider le principe
+- [ ] Montage du partage NAS au démarrage
+- [ ] Vérifier le test de conception : débrancher l'iMac une journée et constater que rien
+      d'essentiel ne s'arrête

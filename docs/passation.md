@@ -131,27 +131,43 @@ sécurité. Mieux vaut archiver 15 Go de trop que perdre un original référenc�
 Les 46,4 Go sont en sécurité dans `/Volumes/homes/benjamin/Save disque imac`, répartis en
 `laine/` et `tilila/`.
 
-## ⚠️ Le formatage du 1 To est SUSPENDU à une décision
+## La question de `Music` est tranchée — le formatage est autorisé
 
-**Ne pas formater le Hitachi 1 To avant que Benjamin ait tranché.** La copie est vérifiée, mais
-le formatage détruira aussi les 219 Go volontairement écartés — et l'un de ces postes mérite
-d'être reconsidéré :
+**La collection est déjà sur le NAS**, dans `Archives IMAC/laine/Music/`, l'archive de
+2020-2022. Vérifié fichier par fichier :
 
-`laine/Music`, **126,6 Go**, dont une collection FLAC en 24-96 et 24-192. La décision de
-l'écarter a été prise pour réduire un transfert qu'on croyait interminable. Or le NAS a
-**1,7 To libres**, le débit réel est de 13,5 Mo/s — soit environ trois heures pour ces 126 Go —
-et surtout **le partage `music` du NAS n'a jamais été indexé**. Une partie de cette collection y
-est peut-être déjà.
+```
+[imac-2013]  1019.6 Mo  .../laine/Music/Bibliothèque musicale/Jazz/Miles Davis -  Bitches Brew 1970 /B1 - Bitches Brew.flac
+[nas-homes]  1019.6 Mo  /Volumes/homes/benjamin/Archives IMAC/laine/Music/Bibliothèque musicale/Jazz/M9IIZA~W/B1 - Bitches Brew.flac
+```
 
-La vérification coûte cinq minutes : monter `/Volumes/music`, l'indexer sous le nom `nas-music`,
-et relancer `manquants` en ajoutant cette référence. Tant que ce n'est pas fait et que Benjamin
-n'a pas dit « formate », le disque reste intact.
+Les chiffres le confirment à l'échelle du volume : en retirant `/laine/Music/` des exclusions,
+les 126,6 Go ne sont pas passés dans « écartés » mais dans « déjà ailleurs », qui saute de
+90,9 à 217,4 Go.
+
+**Une réserve, sans gravité pour les données.** Le dossier `Miles Davis -  Bitches Brew 1970 `
+est devenu `M9IIZA~W` sur le NAS : espaces doubles et espace final que le partage n'a pas su
+écrire, d'où un nom court fabriqué. Les fichiers sont intacts, quelques noms de dossiers
+d'albums sont illisibles. C'est une perte de rangement, réparable à froid.
+
+### Ce que le formatage détruira, en connaissance de cause
+
+| | |
+|---|---|
+| `laine/Music` | 126,6 Go — **déjà sur le NAS**, aucune perte |
+| `Dropbox` (les deux comptes) | 27 Go — dans le cloud, aucune perte |
+| Films, séries, `Downloads`, caches, `.wdc` | sans regret |
+| `laine/Library` | 22,3 Go — **perte réelle mais assumée**, dont d'anciennes sauvegardes d'iPhone dans `MobileSync/Backup` |
+| `tilila/Library` | 14,6 Go — idem |
+
+Le seul poste qui disparaît vraiment est `Library`. Si une vieille sauvegarde d'iPhone comptait,
+c'est le moment de le dire ; sinon le disque peut être formaté.
 
 ## Interdits
 
 - **Ne jamais effacer le Hitachi 1 To** avant que l'étape 4 ait été faite et constatée — c'est
-  désormais le cas — **et** que Benjamin ait explicitement tranché sur les 126,6 Go de `Music`
-  (voir la section précédente). La vérification technique ne vaut pas décision.
+  le cas — et que la question de `Music` ait été tranchée — c'est fait, la collection est sur le
+  NAS. Les deux conditions sont levées : le formatage est autorisé, sur décision de Benjamin.
 - **Ne jamais pousser `~/Inventaire/*.tsv` dans ce dépôt** : ces fichiers listent le chemin de
   183 000 fichiers personnels, et le dépôt est public.
 - Ne pas proposer d'installer Claude Code ou Claude Desktop sur l'iMac : il est sous Catalina,

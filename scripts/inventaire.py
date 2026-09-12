@@ -186,7 +186,8 @@ def cle(taille: int, chemin: str) -> tuple[int, str]:
 
 
 def manquants(source: str, references: list[str], racine: str | None,
-              liste_rsync: str | None, taille_mini: int) -> int:
+              liste_rsync: str | None, taille_mini: int,
+              exclure: list[str] | None = None) -> int:
     lignes = charger()
     sources = [l for l in lignes if l[3] == source]
     if not sources:
@@ -202,10 +203,25 @@ def manquants(source: str, references: list[str], racine: str | None,
     volume_total = sum(l[0] for l in sources if l[0] >= taille_mini)
     volume_absent = sum(l[0] for l in absents)
 
+    # Les dossiers ecartes ne sont retires qu'ici, pas du calcul precedent : on
+    # veut voir separement ce qui manque ailleurs et ce qu'on renonce a copier.
+    volume_ecarte = 0
+    if exclure:
+        gardes = []
+        for l in absents:
+            if any(motif in l[2] for motif in exclure):
+                volume_ecarte += l[0]
+            else:
+                gardes.append(l)
+        absents = gardes
+
     print(f"Source     : {source} — {len(sources)} fichiers, {humain(volume_total)} au-dessus du seuil")
     print(f"Références : {', '.join(references)}")
-    print(f"\nAbsents des références : {len(absents)} fichiers, {humain(volume_absent)}")
-    print(f"Déjà ailleurs          : {humain(volume_total - volume_absent)} — inutile de les copier\n")
+    print(f"\nAbsents des références : {humain(volume_absent)}")
+    print(f"Déjà ailleurs          : {humain(volume_total - volume_absent)} — inutile de les copier")
+    if exclure:
+        print(f"Écartés volontairement : {humain(volume_ecarte)} — {', '.join(exclure)}")
+    print(f"\nÀ COPIER               : {len(absents)} fichiers, {humain(sum(l[0] for l in absents))}\n")
 
     absents.sort(key=lambda l: -l[0])
     for taille, mtime, chemin, _ in absents[:40]:
@@ -345,6 +361,8 @@ def main() -> int:
                    help="index où le fichier est déjà en sécurité, ex. nas")
     p.add_argument("--racine", help="dossier source du futur rsync, pour --liste-rsync")
     p.add_argument("--liste-rsync", help="écrire la liste des fichiers à copier ici")
+    p.add_argument("--exclure", nargs="+", default=None,
+                   help="ne pas copier les chemins contenant ces fragments, ex. /Music/ /Library/")
     p.add_argument("--taille-mini", type=int, default=TAILLE_MINI_DOUBLON,
                    help="ignorer les fichiers plus petits (octets)")
 
@@ -365,7 +383,7 @@ def main() -> int:
         return chercher(args.motif)
     if args.commande == "manquants":
         return manquants(args.source, args.reference, args.racine,
-                         args.liste_rsync, args.taille_mini)
+                         args.liste_rsync, args.taille_mini, args.exclure)
     return doublons(args.taille_mini, args.rapide)
 
 

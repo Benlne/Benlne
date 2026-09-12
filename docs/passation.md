@@ -121,9 +121,37 @@ sécurité. Mieux vaut archiver 15 Go de trop que perdre un original référenc�
 5. **Reformater le 1 To** en HFS+ et lancer la première sauvegarde Time Machine de l'iMac.
 6. Enchaîner sur [`docs/sequoia-oclp.md`](sequoia-oclp.md).
 
+## La copie est faite et vérifiée — 12/09/2026
+
+- Première passe : **49 777 121 868 octets transférés, aucune erreur**, environ une heure à
+  13,5 Mo/s en Wi-Fi.
+- Seconde passe, la seule qui vaut preuve : **748 Ko envoyés, aucun fichier listé, `speedup`
+  de 66 483**. Les deux côtés sont identiques.
+
+Les 46,4 Go sont en sécurité dans `/Volumes/homes/benjamin/Save disque imac`, répartis en
+`laine/` et `tilila/`.
+
+## ⚠️ Le formatage du 1 To est SUSPENDU à une décision
+
+**Ne pas formater le Hitachi 1 To avant que Benjamin ait tranché.** La copie est vérifiée, mais
+le formatage détruira aussi les 219 Go volontairement écartés — et l'un de ces postes mérite
+d'être reconsidéré :
+
+`laine/Music`, **126,6 Go**, dont une collection FLAC en 24-96 et 24-192. La décision de
+l'écarter a été prise pour réduire un transfert qu'on croyait interminable. Or le NAS a
+**1,7 To libres**, le débit réel est de 13,5 Mo/s — soit environ trois heures pour ces 126 Go —
+et surtout **le partage `music` du NAS n'a jamais été indexé**. Une partie de cette collection y
+est peut-être déjà.
+
+La vérification coûte cinq minutes : monter `/Volumes/music`, l'indexer sous le nom `nas-music`,
+et relancer `manquants` en ajoutant cette référence. Tant que ce n'est pas fait et que Benjamin
+n'a pas dit « formate », le disque reste intact.
+
 ## Interdits
 
-- **Ne jamais effacer le Hitachi 1 To** avant que l'étape 4 ait été faite et constatée.
+- **Ne jamais effacer le Hitachi 1 To** avant que l'étape 4 ait été faite et constatée — c'est
+  désormais le cas — **et** que Benjamin ait explicitement tranché sur les 126,6 Go de `Music`
+  (voir la section précédente). La vérification technique ne vaut pas décision.
 - **Ne jamais pousser `~/Inventaire/*.tsv` dans ce dépôt** : ces fichiers listent le chemin de
   183 000 fichiers personnels, et le dépôt est public.
 - Ne pas proposer d'installer Claude Code ou Claude Desktop sur l'iMac : il est sous Catalina,

@@ -54,6 +54,35 @@ C'est la partie « un ordinateur à disposition de l'agent », et elle a quatre 
 Ce que l'iMac ne fera pas : modèles de langage en local (pas de GPU exploitable, 16 Go non
 extensibles), compilations très lourdes, et tout ce qui exige Windows.
 
+## 3 bis. NAS et iMac : le stockage d'un côté, le calcul de l'autre
+
+Les scripts de scraping tournaient sur le NAS. Ils passent sur l'iMac, et c'est le bon sens :
+
+- un CPU de NAS ne fait pas tourner **un navigateur headless**, et sans Chromium on ne récupère
+  rien d'une page qui se rend en JavaScript — c'est la limite décisive, pas la puissance brute ;
+- quatre cœurs Haswell, 16 Go et un SSD encaissent plusieurs workers en parallèle ;
+- un vrai Python et un vrai gestionnaire de paquets, au lieu des contraintes d'un système de NAS.
+
+Le NAS ne disparaît pas du schéma, il **redevient ce qu'il fait de mieux** : du stockage durable
+et redondant. L'iMac calcule, le NAS conserve.
+
+Trois règles qui découlent de ce partage :
+
+1. **Planifier avec `launchd`, pas avec `cron`.** L'iMac n'a pas la disponibilité d'un NAS :
+   il redémarre, il est parfois éteint. `launchd` rattrape une exécution manquée au réveil,
+   `cron` la perd définitivement.
+2. **Écrire les sorties sur le NAS, mais vérifier que le partage est monté avant d'écrire.**
+   Un point de montage absent reste un dossier local ordinaire : le script croit écrire sur le
+   NAS et remplit en silence le SSD de 250 Go. Toujours tester le montage, échouer bruyamment
+   sinon.
+3. **Rendre chaque job idempotent et rattrapable.** Il doit pouvoir être relancé sans doublon,
+   et reprendre la fenêtre manquée quand la machine était éteinte. Sur une machine qui n'est pas
+   de l'infrastructure, c'est ce qui remplace la haute disponibilité.
+
+Un mot pratique sur le scraping lui-même : les requêtes partiront de l'IP de la maison. Un
+rythme raisonnable et le respect des limites du site ne sont pas de la politesse abstraite —
+c'est ce qui évite de faire bloquer la connexion de la maison, NAS et iPhone compris.
+
 ## 4. Les trois chemins d'accès
 
 | D'où | Comment | Pour quoi |

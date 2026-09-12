@@ -45,10 +45,20 @@ Sur `Pictures` : trois bibliothèques se recouvrent — `Bibliothèque Photos.ph
 la migration s'est faite, Photos peut *référencer* des originaux restés dans l'ancienne
 bibliothèque. On copie tout, on triera en ouvrant les deux.
 
-`Users/tilila` (26 Go) n'appartient pas à Benjamin : archive séparée à son nom, et c'est à elle
-de décider de ce qui est gardé.
+`Users/tilila` (25,8 Go) n'appartient pas à Benjamin : archive séparée sous
+`Save disque imac/tilila/`, et c'est à elle de décider de ce qui est gardé. Pour son compte on
+ne trie pas — on prend tout **sauf `Library` (14,6 Go) et `.wdc` (807 Mo)**, soit environ 10 Go.
+Deux dossiers à ne surtout pas perdre : `Zotero` (737 Mo, sa bibliothèque de références) et
+`Thèse gardes.nvpx`.
 
-Total provisoire à copier : **~75 Go**, avant confrontation au NAS.
+Total provisoire, avant confrontation au NAS : **~75 Go pour `laine`, ~10 Go pour `tilila`**.
+
+## Ce qui est déjà sur le NAS
+
+- `Save disque imac/` — créé le 12/09/2026 à 09:32, **vide**. Aucune copie n'a encore eu lieu.
+- `Archives IMAC/laine/` — une archive plus ancienne du même iMac, couvrant 2020-2022. Elle
+  doit impérativement être incluse dans l'index `nas`, puisqu'elle réduira d'autant la liste
+  des fichiers à copier.
 
 ## Ce qui reste à faire, dans l'ordre
 
@@ -58,6 +68,10 @@ Total provisoire à copier : **~75 Go**, avant confrontation au NAS.
    ```bash
    ssh tonton@192.168.1.70 'python3 ~/inventaire.py scan "/Volumes/homes/benjamin" --nom nas'
    ```
+   Le scan peut aussi se faire depuis le MacBook, où le partage est monté : `manquants` compare
+   par taille et par nom, jamais par chemin, donc un index construit là-bas vaut celui construit
+   sur l'iMac. Il faudra seulement **recopier `nas.tsv` dans le `~/Inventaire` de l'iMac**, car
+   c'est là que vivent les deux autres index et que `manquants` les lit.
 2. **Établir la liste réelle à copier**, en excluant les dossiers écartés ci-dessus.
    ```bash
    ssh tonton@192.168.1.70 'python3 ~/inventaire.py manquants imac-2013 \
@@ -66,7 +80,10 @@ Total provisoire à copier : **~75 Go**, avant confrontation au NAS.
    ```
    Puis retirer de `~/a-copier.txt` les chemins sous `laine/Music`, `laine/Dropbox`,
    `laine/Library` et `laine/Downloads`.
-3. **Copier**, depuis l'iMac, vers `Archives/imac-2013-09-2026/` sur le NAS.
+3. **Copier**, depuis l'iMac, vers le dossier que Benjamin a créé sur le NAS :
+   `/Volumes/homes/benjamin/Save disque imac`, avec un sous-dossier par compte —
+   `laine/` et `tilila/`. C'est la destination qui fait foi ; toute mention d'un autre chemin
+   ailleurs dans ce dépôt est une erreur de rédaction.
    ```bash
    ssh tonton@192.168.1.70 'bash ~/copie-vers-nas.sh --liste ~/a-copier.txt \
        "/Volumes/Macintosh HD/Users" "/Volumes/homes/benjamin/Save disque imac"'

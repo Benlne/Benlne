@@ -195,10 +195,20 @@ def manquants(source: str, references: list[str], racine: str | None,
         print(f"Aucun index nommé « {source} ». Voir : inventaire.py liste", file=sys.stderr)
         return 1
 
-    connues = {cle(l[0], l[2]) for l in lignes if l[3] in references}
-    if not connues:
-        print(f"Aucun index parmi {references}. Voir : inventaire.py liste", file=sys.stderr)
+    # Une reference nommee mais inexistante doit ARRETER le programme. Sinon elle
+    # est silencieusement traitee comme vide, la comparaison est amputee, et un
+    # fichier passe pour absent — ou pire, on croit avoir compare a une sauvegarde
+    # qui n'a jamais ete indexee avant d'effacer un disque.
+    disponibles = {l[3] for l in lignes}
+    introuvables = [r for r in references if r not in disponibles]
+    if introuvables:
+        print(f"Références inexistantes : {', '.join(introuvables)}", file=sys.stderr)
+        print(f"Index disponibles : {', '.join(sorted(disponibles))}", file=sys.stderr)
+        print("Comparer à une référence vide donnerait un résultat faux. Arrêt.",
+              file=sys.stderr)
         return 1
+
+    connues = {cle(l[0], l[2]) for l in lignes if l[3] in references}
 
     absents = [l for l in sources if l[0] >= taille_mini and cle(l[0], l[2]) not in connues]
     volume_total = sum(l[0] for l in sources if l[0] >= taille_mini)

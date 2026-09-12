@@ -179,6 +179,28 @@ C'est l'étape qui fait fonctionner les graphismes. Sans elle, l'interface est s
 4. Vérifier : les animations sont fluides, « À propos de ce Mac » affiche Sequoia, le Wi-Fi
    fonctionne.
 
+## 7 bis. Le Wi-Fi ne marche pas avant les root patches — et c'est bloquant
+
+**Constaté sur cette machine.** Dans l'assistant de configuration de Sequoia, la liste des
+réseaux Wi-Fi est **vide** : Apple a retiré de Sequoia les pilotes de la carte Broadcom de cet
+iMac. Ce n'est pas une panne, et ce n'est pas réparable par un réglage — la carte ne réapparaît
+qu'après les root patches d'OCLP, qui restaurent aussi les graphismes.
+
+D'où un problème d'amorçage circulaire : **les root patches ont besoin d'Internet pour se
+télécharger, et la seule connexion de la machine est justement le Wi-Fi.**
+
+Trois sorties, par ordre de commodité :
+
+1. **L'iPhone en USB.** Le brancher, le déverrouiller, activer le partage de connexion. macOS le
+   voit comme une interface Ethernet, sans aucun pilote Wi-Fi. Immédiat et gratuit.
+2. **Un câble Ethernet** de la box à l'iMac. C'est de toute façon ce qu'il faut pour une machine
+   allumée en permanence.
+3. **Continuer sans réseau** (*Autres options de réseau* dans l'assistant), terminer la
+   configuration, puis brancher et patcher depuis le bureau.
+
+À prévoir dans l'autre sens le jour d'une réinstallation : avoir le câble branché **avant** de
+démarrer l'installation évite entièrement cette impasse.
+
 ## 8. Finitions
 
 1. **Disque de démarrage** : Réglages Système → Général → Disque de démarrage → `Sequoia`.

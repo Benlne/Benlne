@@ -197,6 +197,28 @@ le Hitachi 1 To.** Relire le nom et la taille affichés avant de valider. Une co
 Identifiants à ne pas confondre : **`/dev/disk4` porte la sauvegarde Time Machine**, `/dev/disk5`
 est la clé d'installation.
 
+## Phase 3 en cours — 12/09/2026
+
+- **OpenCore est installé** sur `disk0s1`, la partition EFI du SSD interne. Rien n'est encore
+  installé comme système : c'est un chargeur de démarrage posé à côté, Catalina démarre toujours.
+- La clé d'installation s'écrit (`createinstallmedia`, phase `Copying to disk`).
+
+Liste des disques telle qu'OCLP la présente, à ne jamais confondre :
+
+| | |
+|---|---|
+| `disk0` — Samsung SSD 860 EVO 250GB | le disque interne, cible d'OpenCore |
+| `disk4` — D HTS541010A9E66, 1,0 To | la sauvegarde Time Machine |
+| `disk5` — USB Flash Drive, 64 Go | la clé d'installation |
+
+**Le piège du moment** : OCLP propose « Reboot to apply » dès qu'il a écrit l'EFI, alors que
+`createinstallmedia` n'a pas fini. Répondre **Ignore**. Un redémarrage pendant l'écriture laisse
+une clé non amorçable et impose de refaire trente minutes. Le seul feu vert au redémarrage est
+la ligne `Install media now available at "/Volumes/Install macOS Sequoia"`.
+
+Autre piège vérifié au passage : `createinstallmedia` renomme le volume **dès le début**. Voir
+`Install macOS Sequoia` apparaître dans le Finder ne prouve donc rien sur l'avancement.
+
 ## Interdits
 
 - **Le Hitachi 1 To porte maintenant la sauvegarde Time Machine.** Il ne doit plus jamais être

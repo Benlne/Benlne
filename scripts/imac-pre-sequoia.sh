@@ -60,64 +60,82 @@ fi
 titre "Disques externes branchés"
 # Deux besoins distincts et incompatibles : un support a effacer pour l'installeur
 # Sequoia, et un disque a conserver pour la sauvegarde Time Machine. Ce bloc
-# decrit ce qui est branche, il ne designe rien comme "effaçable".
-candidat_installeur=0
+# decrit ce qui est branche, il ne designe jamais un disque porteur de donnees
+# comme effaçable.
+#
+# On part des volumes MONTES et non de "diskutil list external physical" : un
+# disque externe en APFS apparait comme volume d'un conteneur synthetise, que
+# cette liste-la ne montre pas. C'est ce qui faisait passer un disque plein pour
+# un disque vide.
+porteurs_avec_donnees=" "
 disque_sauvegarde=0
 externes=0
-while IFS= read -r disque; do
-  [ -z "$disque" ] && continue
+
+for montage in /Volumes/*; do
+  [ -d "$montage" ] || continue
+  info=$(diskutil info "$montage" 2>/dev/null) || continue
+  printf '%s' "$info" | grep -q "Device Location: *External" || continue
   externes=$((externes + 1))
-  info=$(diskutil info "$disque" 2>/dev/null)
-  taille=$(printf '%s' "$info" | awk '/Disk Size/ {print $3, $4; exit}')
-  octets=$(printf '%s' "$info" | awk '/Disk Size/ {print $5; exit}' | tr -d '(')
-  nom=$(printf '%s' "$info" | awk -F': *' '/Device \/ Media Name/ {print $2; exit}')
+
+  noeud=$(printf '%s' "$info" | awk -F': *' '/Device Node/ {print $2; exit}')
   ssd=$(printf '%s' "$info" | awk -F': *' '/Solid State/ {print $2; exit}')
+  # Disque physique porteur : le magasin APFS s'il existe, sinon le disque entier.
+  physique=$(printf '%s' "$info" | awk -F': *' '/APFS Physical Store/ {print $2; exit}' | sed 's/s[0-9]*$//')
+  [ -z "$physique" ] && physique=$(printf '%s' "$info" | awk -F': *' '/Part of Whole/ {print $2; exit}')
   case "$ssd" in
     Yes) type="SSD ou clé" ;;
     No)  type="disque mécanique" ;;
     *)   type="type inconnu" ;;
   esac
-  printf '  %s — %s — %s — %s\n' "$disque" "${nom:-?}" "${taille:-?}" "$type"
 
-  # Volumes montés de ce disque, avec leur occupation : un disque qui contient
-  # des données n'est pas un candidat pour l'installeur.
-  occupe=0
-  while IFS= read -r montage; do
-    [ -z "$montage" ] && continue
-    ligne=$(df -h "$montage" 2>/dev/null | awk 'NR==2 {print $3" utilisés sur "$2}')
-    printf '      volume %-28s %s\n' "$(basename "$montage")" "$ligne"
-    if [ -d "$montage/Backups.backupdb" ] || printf '%s' "$montage" | grep -qi "time.*machine"; then
-      printf '      %s\n' "^ sauvegarde Time Machine existante"
-      disque_sauvegarde=1
-    fi
-    utilise_ko=$(df -k "$montage" 2>/dev/null | awk 'NR==2 {print $3}')
-    [ "${utilise_ko:-0}" -gt 1048576 ] 2>/dev/null && occupe=1
-  done <<VOLUMES
-$(diskutil list "$disque" 2>/dev/null | awk '/\/Volumes\// {sub(/.*\/Volumes\//, "/Volumes/"); print}')
-VOLUMES
+  occupation=$(df -h "$montage" 2>/dev/null | awk 'NR==2 {print $3" utilisés sur "$2}')
+  printf '  %-28s %s — %s — %s\n' "$(basename "$montage")" "${noeud:-?}" "$type" "${occupation:-?}"
+  printf '      disque physique porteur : %s\n' "${physique:-?}"
 
-  if [ "${octets:-0}" -ge 15000000000 ] 2>/dev/null; then
-    if [ "$occupe" -eq 1 ]; then
-      printf '      %s\n' "contient des données : à conserver, pas à transformer en installeur"
-      disque_sauvegarde=1
-    else
-      candidat_installeur=1
-    fi
+  utilise_ko=$(df -k "$montage" 2>/dev/null | awk 'NR==2 {print $3}')
+  if [ -d "$montage/Backups.backupdb" ]; then
+    printf '      %s\n' "sauvegarde Time Machine existante"
+    disque_sauvegarde=1
+    porteurs_avec_donnees="$porteurs_avec_donnees$physique "
+  elif [ "${utilise_ko:-0}" -gt 1048576 ] 2>/dev/null; then
+    printf '      %s\n' "contient des données — à conserver, ne jamais le désigner à OCLP"
+    disque_sauvegarde=1
+    porteurs_avec_donnees="$porteurs_avec_donnees$physique "
   fi
+done
+
+# Un support vraiment vierge (clé neuve, disque efface) n'a aucun volume monte :
+# on le retrouve par la liste des disques physiques externes.
+candidat_installeur=0
+while IFS= read -r disque; do
+  [ -z "$disque" ] && continue
+  identifiant=$(basename "$disque")
+  info=$(diskutil info "$disque" 2>/dev/null)
+  octets=$(printf '%s' "$info" | awk '/Disk Size/ {print $5; exit}' | tr -d '(')
+  taille=$(printf '%s' "$info" | awk '/Disk Size/ {print $3, $4; exit}')
+  nom=$(printf '%s' "$info" | awk -F': *' '/Device \/ Media Name/ {print $2; exit}')
+  [ "${octets:-0}" -ge 15000000000 ] 2>/dev/null || continue
+  case "$porteurs_avec_donnees" in
+    *" $identifiant "*)
+      printf '  %s (%s, %s) : porte des données, écarté comme installeur\n' "$identifiant" "${nom:-?}" "${taille:-?}" ;;
+    *)
+      printf '  %s (%s, %s) : aucun volume de données monté — candidat installeur\n' "$identifiant" "${nom:-?}" "${taille:-?}"
+      candidat_installeur=1 ;;
+  esac
 done <<EOF
 $(diskutil list external physical 2>/dev/null | awk '/^\/dev\/disk/ {print $1}')
 EOF
 
-if [ "$externes" -eq 0 ]; then
+if [ "$externes" -eq 0 ] && [ "$candidat_installeur" -eq 0 ]; then
   orange "Aucun disque externe branché — il en faut deux rôles : un support de 16 Go à effacer pour l'installeur, et de préférence un disque pour Time Machine"
 else
   if [ "$candidat_installeur" -eq 1 ]; then
-    vert "Un support d'au moins 16 Go et vide peut servir d'installeur"
+    vert "Un support d'au moins 16 Go sans données peut servir d'installeur"
   else
-    orange "Aucun support vide de 16 Go : ne PAS effacer un disque qui contient des données, brancher une clé dédiée"
+    orange "Aucun support vide de 16 Go : brancher une clé dédiée, et ne PAS effacer un disque qui contient des données"
   fi
   if [ "$disque_sauvegarde" -eq 1 ]; then
-    vert "Un disque externe avec des données est branché : candidat pour la sauvegarde Time Machine"
+    vert "Un disque externe porteur de données est branché : candidat pour Time Machine"
   else
     orange "Pas de disque identifié pour Time Machine — la sauvegarde reste le meilleur filet avant de toucher au système"
   fi

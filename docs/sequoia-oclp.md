@@ -110,6 +110,52 @@ Toujours dans OCLP :
 À ce stade, rien n'est encore installé comme système : OpenCore est juste un chargeur de
 démarrage posé à côté. Catalina démarre toujours normalement.
 
+## 5 bis. La même chose en ligne de commande
+
+Les étapes 2 à 4 se font aussi au terminal, plus vite et — pour l'écriture de l'installeur —
+**plus sûrement** : `createinstallmedia` prend le **nom du volume**, pas un disque choisi dans
+une liste. C'est la différence entre nommer sa cible et la désigner du doigt.
+
+```bash
+# Volume Sequoia — disk1 est le conteneur APFS du SSD interne
+diskutil list internal
+diskutil apfs addVolume disk1 APFS Sequoia
+
+# OpenCore Legacy Patcher 2.5.0 — un .pkg, pas un zip
+curl -L --progress-bar -o ~/Downloads/OpenCore-Patcher.pkg \
+  https://github.com/dortania/OpenCore-Legacy-Patcher/releases/download/2.5.0/OpenCore-Patcher.pkg
+sudo installer -pkg ~/Downloads/OpenCore-Patcher.pkg -target /
+ls -d /Applications/OpenCore-Patcher.app
+
+# Identifier les disques externes SANS ambiguïté avant de toucher à quoi que ce soit
+for v in /Volumes/*; do
+  printf '%-28s %-14s %s\n' "$(basename "$v")" \
+    "$(diskutil info "$v" 2>/dev/null | awk -F': *' '/Device Node/{print $2}')" \
+    "$(df -h "$v" 2>/dev/null | awk 'NR==2{print $3" utilisés sur "$2}')"
+done
+```
+
+Le téléchargement de l'installeur Sequoia lui-même passe par l'interface d'OCLP
+(*Create macOS Installer → Download macOS Installer*) : il n'existe pas de commande fiable pour
+l'obtenir sous Catalina, `softwareupdate --fetch-full-installer` ne proposant que les versions
+compatibles avec le système en cours.
+
+Une fois `Install macOS Sequoia.app` présent dans `/Applications`, l'écriture sur la clé se fait
+au terminal :
+
+```bash
+# Préparer la clé — remplacer diskN par son identifiant, relu dans la liste ci-dessus
+diskutil eraseDisk JHFS+ INSTALLEUR GPT /dev/diskN
+
+# Écrire l'installeur, en NOMMANT le volume
+sudo "/Applications/Install macOS Sequoia.app/Contents/Resources/createinstallmedia" \
+  --volume /Volumes/INSTALLEUR
+```
+
+> `diskutil eraseDisk` efface un disque entier et ne demande aucune confirmation. Le Hitachi
+> 1 To porte la sauvegarde Time Machine : son identifiant ne doit jamais apparaître dans cette
+> commande.
+
 ## 6. Installer Sequoia
 
 1. Redémarrer en maintenant <kbd>alt</kbd> jusqu'au sélecteur de démarrage.

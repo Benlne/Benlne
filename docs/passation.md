@@ -197,29 +197,47 @@ le Hitachi 1 To.** Relire le nom et la taille affichés avant de valider. Une co
 Identifiants à ne pas confondre : **`/dev/disk4` porte la sauvegarde Time Machine**, `/dev/disk5`
 est la clé d'installation.
 
-## Phase 3 en cours — 12/09/2026
+## État au 12/09/2026 — Sequoia est installé, les root patches bloquent
 
-- **OpenCore est installé** sur `disk0s1`, la partition EFI du SSD interne. Rien n'est encore
-  installé comme système : c'est un chargeur de démarrage posé à côté, Catalina démarre toujours.
-- La clé d'installation s'écrit (`createinstallmedia`, phase `Copying to disk`).
+**Le blocage central du projet est levé** : macOS Sequoia 15.7.9 (build 24G830) démarre sur
+l'iMac14,1, et Claude Desktop y est installé. La machine satisfait désormais l'exigence
+macOS 13+.
 
-Liste des disques telle qu'OCLP la présente, à ne jamais confondre :
+Ce qui est fait :
 
-| | |
-|---|---|
-| `disk0` — Samsung SSD 860 EVO 250GB | le disque interne, cible d'OpenCore |
-| `disk4` — D HTS541010A9E66, 1,0 To | la sauvegarde Time Machine |
-| `disk5` — USB Flash Drive, 64 Go | la clé d'installation |
+- OpenCore installé sur `disk0s1`, la partition EFI du SSD interne.
+- Sequoia installé sur le volume `Sequoia` (`disk1s6`), configuré **comme un Mac neuf** — aucune
+  migration depuis Catalina, volontairement.
+- Nouveau compte sur ce système : `imacbt`, machine nommée `iMac-de-Imac`.
+- Catalina reste intact et démarrable sur `MACINTOSH SSD` (<kbd>alt</kbd> au démarrage).
 
-**Le piège du moment** : OCLP propose « Reboot to apply » dès qu'il a écrit l'EFI, alors que
-`createinstallmedia` n'a pas fini. Répondre **Ignore**. Un redémarrage pendant l'écriture laisse
-une clé non amorçable et impose de refaire trente minutes. Le seul feu vert au redémarrage est
-la ligne `Install media now available at "/Volumes/Install macOS Sequoia"`.
+**Ce qui bloque : les root patches.** `Start Root Patching` échoue sur `MetallibSupportPkg`.
 
-Autre piège vérifié au passage : `createinstallmedia` renomme le volume **dès le début**. Voir
-`Install macOS Sequoia` apparaître dans le Finder ne prouve donc rien sur l'avancement.
+Deux constats pour le diagnostic :
 
-## Interdits
+1. **Le build est couvert.** `MetallibSupportPkg` publie bien une version `15.7.9-24G830`,
+   correspondant exactement au build installé. L'hypothèse « pas de support pour cette version
+   de macOS » est donc écartée.
+2. **Le réseau est instable.** Plusieurs `La connexion réseau a été perdue` pendant des
+   téléchargements. La carte Wi-Fi Broadcom n'a pas de pilote tant que les root patches ne sont
+   pas passés — la machine est donc sur une liaison de secours (iPhone en USB), ce qui explique
+   les coupures et probablement l'échec lui-même.
+
+Conséquences visibles tant que ce n'est pas réglé : l'affichage déchire (pas d'accélération
+graphique) et le Wi-Fi n'apparaît pas.
+
+**Piste à suivre en priorité : une liaison filaire stable (Ethernet), puis relancer
+`Post-Install Root Patch → Start Root Patching`.** Vérifier au préalable que GitHub répond :
+
+```bash
+curl -sI -o /dev/null -w "%{http_code}\n" https://github.com/dortania/MetallibSupportPkg/releases/latest
+```
+
+OCLP n'était pas présent sur le nouveau système : il a fallu le réinstaller depuis Sequoia
+(`OpenCore-Patcher.pkg`, 738 Mo). Attention au collage : la continuation de ligne `\` se perd
+souvent, donner les commandes `curl` **sur une seule ligne**.
+
+## Interdits## Interdits
 
 - **Le Hitachi 1 To porte maintenant la sauvegarde Time Machine.** Il ne doit plus jamais être
   désigné comme cible d'un effacement — en particulier pas à OCLP, qui demandera un disque pour

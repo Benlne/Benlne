@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import os
+import signal
 import sys
 import time
 from collections import defaultdict
@@ -337,6 +338,14 @@ def doublons(taille_mini: int, rapide: bool) -> int:
 
 
 def main() -> int:
+    # Sans cela, un « | head » ferme le tuyau et Python affiche une trace
+    # BrokenPipeError alarmante pour ce qui est le comportement normal d'un
+    # filtre Unix.
+    try:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except (AttributeError, ValueError):
+        pass  # SIGPIPE n'existe pas partout (Windows)
+
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sous = ap.add_subparsers(dest="commande", required=True)

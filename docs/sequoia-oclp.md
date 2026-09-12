@@ -3,8 +3,9 @@
 Procédure pas à pas pour cette machine précise : iMac14,1, SSD interne Samsung 860 EVO 250 Go,
 Catalina 10.15.8, FileVault désactivé, compte administrateur, clé USB de 16 Go disponible.
 
-**Pas de sauvegarde Time Machine** : le filet de sécurité est le volume Catalina, laissé intact
-et démarrable pendant toute l'opération. Lire la section « Risques » avant de commencer.
+Deux filets de sécurité : une **sauvegarde Time Machine** sur le Hitachi 1 To externe (le
+disque d'origine de la machine, reconverti en externe quand le SSD a été posé), et le **volume
+Catalina** laissé intact et démarrable pendant toute l'opération.
 
 Durée : 2 à 3 heures, dont une heure de téléchargement. Prévoir de ne pas être pressé.
 
@@ -25,11 +26,24 @@ Ce qui peut réellement mal tourner :
 | Erreur de manipulation dans Utilitaire de disque (effacer le mauvais volume) | faible mais réelle | Lire deux fois le nom du volume avant de valider. Ne jamais toucher à `MACINTOSH SSD` ni à `Container disk1` lui-même |
 | Sequoia inutilisable après patches (graphismes, Wi-Fi) | modérée | Redémarrer sur Catalina avec <kbd>alt</kbd>, tout est resté en place |
 | Disque plein pendant l'installation | modérée (250 Go pour deux systèmes) | Vérifier 60 Go libres avant de commencer |
-| Panne du SSD pendant l'opération | très faible | Aucune. C'est le risque accepté faute de sauvegarde |
+| Panne du SSD pendant l'opération | très faible | Sauvegarde Time Machine sur le 1 To externe |
 
-**Avant de commencer**, copier sur la clé USB ou dans un cloud tout ce qui serait irremplaçable
-(photos, documents). `scripts/imac-pre-sequoia.sh` affiche le poids des dossiers personnels
-pour savoir de quoi on parle. Dix minutes qui suppriment le seul vrai regret possible.
+### Deux supports externes, deux rôles à ne pas confondre
+
+| Support | Rôle | Sort réservé |
+|---|---|---|
+| Hitachi 1 To (`/dev/disk4`) | sauvegarde **Time Machine** | conservé, jamais désigné à OCLP |
+| Clé USB de 16 Go dédiée | **installeur Sequoia** | **effacé en entier** |
+
+Le 1 To ne peut pas tenir les deux rôles : OCLP efface le disque entier qu'on lui désigne, pas
+une partition. Une confusion à cette étape détruit la sauvegarde au moment précis où elle sert.
+
+### Sauvegarde, à faire avant tout le reste
+
+Réglages Système → Time Machine → **Sélectionner le disque de sauvegarde** → le Hitachi 1 To →
+lancer la sauvegarde. Compter une à deux heures pour environ 35 Go de données personnelles sur
+un disque mécanique en USB. C'est la première chose à lancer : elle tourne pendant que le reste
+se prépare.
 
 En dernier recours, Catalina se réinstalle depuis la récupération Internet
 (<kbd>cmd</kbd>+<kbd>alt</kbd>+<kbd>R</kbd> au démarrage) : le volume `Recovery` est toujours
@@ -73,8 +87,9 @@ Dans OCLP :
 1. **Create macOS Installer** → **Download macOS Installer**.
 2. Choisir la dernière **macOS Sequoia 15.x**. Le téléchargement fait environ 15 Go — c'est la
    partie longue, surtout en Wi-Fi.
-3. Une fois terminé, OCLP propose d'écrire l'installeur sur un disque : choisir la clé USB.
-   **Son contenu est effacé.**
+3. Une fois terminé, OCLP propose d'écrire l'installeur sur un disque : choisir **la clé USB
+   de 16 Go**, surtout pas le Hitachi 1 To qui porte la sauvegarde. **Le disque désigné est
+   effacé en entier.** Relire son nom et sa taille avant de valider.
 4. Saisir le mot de passe administrateur quand il est demandé. L'écriture prend 20 à 30 minutes.
 
 > Si l'écriture échoue avec une erreur de `createinstallmedia`, c'est la limite connue d'un
@@ -148,6 +163,7 @@ C'est l'étape qui fait fonctionner les graphismes. Sans elle, l'interface est s
 | Plus de Wi-Fi après mise à jour | Même cause, même réponse |
 | Le sélecteur OpenCore n'apparaît plus | Redémarrer avec <kbd>alt</kbd> → EFI Boot. Si l'entrée a disparu, refaire l'étape 5 depuis Catalina |
 | Tout annuler | Démarrer sur Catalina, supprimer le volume `Sequoia` dans Utilitaire de disque, et effacer le dossier `EFI/OC` de la partition EFI |
+| Catalina lui-même est perdu | Restaurer depuis la sauvegarde Time Machine, ou récupération Internet (<kbd>cmd</kbd>+<kbd>alt</kbd>+<kbd>R</kbd>) |
 
 Dans tous les cas : Catalina reste démarrable tant que son volume n'a pas été touché. C'est le
 point sur lequel toute cette procédure est construite.

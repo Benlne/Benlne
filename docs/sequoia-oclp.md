@@ -1,7 +1,7 @@
 # Installer macOS Sequoia sur l'iMac14,1 avec OpenCore Legacy Patcher
 
 Procédure pas à pas pour cette machine précise : iMac14,1, SSD interne Samsung 860 EVO 250 Go,
-Catalina 10.15.8, FileVault désactivé, compte administrateur, clé USB de 16 Go disponible.
+Catalina 10.15.8, FileVault désactivé, compte administrateur, clé USB de 64 Go disponible.
 
 Deux filets de sécurité : une **sauvegarde Time Machine** sur le Hitachi 1 To externe (le
 disque d'origine de la machine, reconverti en externe quand le SSD a été posé), et le **volume
@@ -32,8 +32,11 @@ Ce qui peut réellement mal tourner :
 
 | Support | Rôle | Sort réservé |
 |---|---|---|
-| Hitachi 1 To (`/dev/disk4`) | sauvegarde **Time Machine** | conservé, jamais désigné à OCLP |
-| Clé USB de 16 Go dédiée | **installeur Sequoia** | **effacé en entier** |
+| Hitachi 1 To, volume `Macintosh HD` | sauvegarde **Time Machine** | conservé, jamais désigné à OCLP |
+| Clé USB dédiée (16 Go minimum) | **installeur Sequoia** | **effacé en entier** |
+
+> Repérer ces disques **par leur nom**, jamais par leur numéro : `diskutil` renumérote d'une
+> session à l'autre. Le Hitachi a été vu `disk4` puis `disk2` le même jour.
 
 Le 1 To ne peut pas tenir les deux rôles : OCLP efface le disque entier qu'on lui désigne, pas
 une partition. Une confusion à cette étape détruit la sauvegarde au moment précis où elle sert.
@@ -87,8 +90,8 @@ Dans OCLP :
 1. **Create macOS Installer** → **Download macOS Installer**.
 2. Choisir la dernière **macOS Sequoia 15.x**. Le téléchargement fait environ 15 Go — c'est la
    partie longue, surtout en Wi-Fi.
-3. Une fois terminé, OCLP propose d'écrire l'installeur sur un disque : choisir **la clé USB
-   de 16 Go**, surtout pas le Hitachi 1 To qui porte la sauvegarde. **Le disque désigné est
+3. Une fois terminé, OCLP propose d'écrire l'installeur sur un disque : choisir **la clé USB**,
+   surtout pas le Hitachi 1 To qui porte la sauvegarde. **Le disque désigné est
    effacé en entier.** Relire son nom et sa taille avant de valider.
 4. Saisir le mot de passe administrateur quand il est demandé. L'écriture prend 20 à 30 minutes.
 
@@ -200,6 +203,33 @@ Trois sorties, par ordre de commodité :
 
 À prévoir dans l'autre sens le jour d'une réinstallation : avoir le câble branché **avant** de
 démarrer l'installation évite entièrement cette impasse.
+
+## 7 ter. Si les root patches échouent sur MetallibSupportPkg
+
+**Rencontré sur cette machine, et la cause n'est pas celle qu'on croit.** Le symptôme est un
+échec de `Start Root Patching` mentionnant `MetallibSupportPkg`. Le réflexe — soupçonner le
+téléchargement, d'autant que le réseau est fragile avant les patches — est trompeur : le paquet
+se téléchargeait parfaitement, 81 Mo en 5,7 secondes.
+
+L'échec réel était un `FileNotFoundError` sur
+`/Library/PrivilegedHelperTools/com.dortania.opencore-legacy-patcher.privileged-helper`.
+
+**OCLP n'avait été installé que sur Catalina et était lancé depuis `/Volumes/MACINTOSH SSD`.**
+Son assistant privilégié n'existait donc pas sur le système Sequoia qu'il tentait de patcher.
+
+Correctif, **depuis Sequoia** :
+
+```bash
+sudo installer -pkg ~/Downloads/OpenCore-Patcher.pkg -target /
+sudo /Applications/OpenCore-Patcher.app/Contents/MacOS/OpenCore-Patcher --patch_sys_vol
+```
+
+`Patching complete`, code de sortie 0, redémarrage. Vérification après redémarrage : kexts Azul
+et HD5000 chargés, 1536 Mo de VRAM, Metal 2, Wi-Fi Broadcom connecté.
+
+**La règle : OCLP doit être installé sur le système qu'il patche, et lancé depuis lui.** Le
+lancer depuis un autre volume échoue sur son assistant privilégié, avec un message qui ne dit
+pas pourquoi.
 
 ## 8. Finitions
 

@@ -180,8 +180,8 @@ dupliquées ailleurs : il porte désormais **la seule sauvegarde système de la 
 l'étape suivante consiste précisément à désigner un disque à effacer, pour y écrire l'installeur
 Sequoia.
 
-**Quand OCLP demandera sur quel disque écrire l'installeur : ce sera la clé USB de 16 Go, jamais
-le Hitachi 1 To.** Relire le nom et la taille affichés avant de valider. Une confusion à cette
+**Quand OCLP demandera sur quel disque écrire l'installeur : ce sera la clé USB, jamais le
+Hitachi 1 To.** Relire le nom et la taille affichés avant de valider. Une confusion à cette
 étape détruit la sauvegarde au moment précis où elle protège l'opération.
 
 ## Phase 2 en cours — 12/09/2026
@@ -191,57 +191,77 @@ le Hitachi 1 To.** Relire le nom et la taille affichés avant de valider. Une co
 | Sauvegarde Time Machine | **faite**, `Backups.backupdb` présent sur `/Volumes/Macintosh HD` (le Hitachi, désormais en HFS+) |
 | Volume `Sequoia` | créé, `disk1s6`. Un doublon `disk1s7` a été créé par erreur puis supprimé — les deux étaient vides |
 | OpenCore Legacy Patcher 2.5.0 | installé dans `/Applications/OpenCore-Patcher.app` |
-| Clé d'installation | `INSTALLEUR`, 59 Go, HFS+ journalisé sur schéma GUID, sur `/dev/disk5` |
+| Clé d'installation | `INSTALLEUR` — Lexar 64 Go, HFS+ journalisé sur schéma GUID |
 | Installeur Sequoia | téléchargement en cours par OCLP |
 
-Identifiants à ne pas confondre : **`/dev/disk4` porte la sauvegarde Time Machine**, `/dev/disk5`
-est la clé d'installation.
+**Ne jamais se fier aux numéros de disque écrits ici ou ailleurs : ils changent d'une session à
+l'autre.** Le Hitachi était `disk4` pendant l'installation et `disk2` après. Identifier les
+disques par leur nom (`Macintosh HD` pour la sauvegarde, `INSTALLEUR` pour la clé) et relire
+l'identifiant au moment d'agir.
 
-## État au 12/09/2026 — Sequoia est installé, les root patches bloquent
+## Résolu le 12/09/2026 — Sequoia est opérationnel, root patches compris
 
-**Le blocage central du projet est levé** : macOS Sequoia 15.7.9 (build 24G830) démarre sur
-l'iMac14,1, et Claude Desktop y est installé. La machine satisfait désormais l'exigence
-macOS 13+.
+**Le projet a atteint son but.** macOS Sequoia 15.7.9 (build 24G830) tourne sur l'iMac14,1 avec
+l'accélération graphique et le Wi-Fi, et Claude Code y tourne en local. Catalina reste intact et
+démarrable sur `MACINTOSH SSD`.
 
-Ce qui est fait :
+Vérifié après redémarrage par la session locale : kexts Azul et HD5000 chargés, 1536 Mo de VRAM,
+Metal 2. Wi-Fi Broadcom connecté, route par défaut sur `en1` — la liaison de secours par iPhone
+n'est plus nécessaire. Réglages de veille 24/7 appliqués (`sleep`, `disksleep`, `standby`,
+`autopoweroff`, `powernap` à 0, `autorestart` à 1).
 
-- OpenCore installé sur `disk0s1`, la partition EFI du SSD interne.
-- Sequoia installé sur le volume `Sequoia` (`disk1s6`), configuré **comme un Mac neuf** — aucune
-  migration depuis Catalina, volontairement.
-- Nouveau compte sur ce système : `imacbt`, machine nommée `iMac-de-Imac`.
-- Catalina reste intact et démarrable sur `MACINTOSH SSD` (<kbd>alt</kbd> au démarrage).
+### La cause racine n'était pas le réseau
 
-**Ce qui bloque : les root patches.** `Start Root Patching` échoue sur `MetallibSupportPkg`.
+C'est l'hypothèse que portait ce document, et elle était fausse. `MetallibSupportPkg` se
+téléchargeait parfaitement — 81 Mo en 5,7 s. **C'est l'installation qui échouait**, sur un
+`FileNotFoundError` :
 
-Deux constats pour le diagnostic :
-
-1. **Le build est couvert.** `MetallibSupportPkg` publie bien une version `15.7.9-24G830`,
-   correspondant exactement au build installé. L'hypothèse « pas de support pour cette version
-   de macOS » est donc écartée.
-2. **Le réseau est instable.** Plusieurs `La connexion réseau a été perdue` pendant des
-   téléchargements. La carte Wi-Fi Broadcom n'a pas de pilote tant que les root patches ne sont
-   pas passés — la machine est donc sur une liaison de secours (iPhone en USB), ce qui explique
-   les coupures et probablement l'échec lui-même.
-
-Conséquences visibles tant que ce n'est pas réglé : l'affichage déchire (pas d'accélération
-graphique) et le Wi-Fi n'apparaît pas.
-
-**Piste à suivre en priorité : une liaison filaire stable (Ethernet), puis relancer
-`Post-Install Root Patch → Start Root Patching`.** Vérifier au préalable que GitHub répond :
-
-```bash
-curl -sI -o /dev/null -w "%{http_code}\n" https://github.com/dortania/MetallibSupportPkg/releases/latest
+```
+/Library/PrivilegedHelperTools/com.dortania.opencore-legacy-patcher.privileged-helper
 ```
 
-OCLP n'était pas présent sur le nouveau système : il a fallu le réinstaller depuis Sequoia
-(`OpenCore-Patcher.pkg`, 738 Mo). Attention au collage : la continuation de ligne `\` se perd
-souvent, donner les commandes `curl` **sur une seule ligne**.
+OCLP n'avait été installé que **sur Catalina**, et était lancé depuis
+`/Volumes/MACINTOSH SSD`. Son assistant privilégié n'existait donc pas sur le système Sequoia
+qu'il tentait de patcher. Les coupures réseau observées par ailleurs étaient réelles, mais sans
+rapport — une coïncidence qui a orienté le diagnostic dans la mauvaise direction pendant un
+moment.
+
+**Leçon à retenir : OCLP doit être installé sur le système qu'il patche, et lancé depuis lui.**
+Le lancer depuis un autre volume échoue sur son assistant privilégié, avec un message qui ne dit
+pas pourquoi.
+
+### Le correctif
+
+```bash
+# depuis Sequoia, pas depuis Catalina
+sudo installer -pkg ~/Downloads/OpenCore-Patcher.pkg -target /
+sudo /Applications/OpenCore-Patcher.app/Contents/MacOS/OpenCore-Patcher --patch_sys_vol
+```
+
+Retour `Patching complete`, code de sortie 0, puis redémarrage.
+
+### Deux corrections apportées par la session locale
+
+**Les numéros de disque changent d'une session à l'autre.** Le Hitachi porteur de la sauvegarde
+Time Machine était `/dev/disk4` pendant l'installation et `/dev/disk2` ensuite. Toute consigne
+qui désigne un disque par son numéro est donc dangereuse à la relecture : **désigner les disques
+par leur nom**, et vérifier l'identifiant au moment d'agir, jamais avant.
+
+**La clé d'installation est une Lexar de 64 Go**, pas de 16 Go comme écrit plus haut dans ce
+dépôt. Le minimum reste 16 Go ; c'est la description de l'existant qui était fausse.
+
+### Un point resté ouvert
+
+La session locale a préparé un commit `4ede90f` dans `~/Benlne` sur l'iMac, mais **n'a pas pu le
+pousser** : pas d'identifiants GitHub sur cette machine. Le présent texte a donc été écrit depuis
+la session web à partir de son rapport. Configurer l'accès GitHub sur l'iMac fait partie des
+finitions.
 
 ## Interdits## Interdits
 
-- **Le Hitachi 1 To porte maintenant la sauvegarde Time Machine.** Il ne doit plus jamais être
-  désigné comme cible d'un effacement — en particulier pas à OCLP, qui demandera un disque pour
-  y écrire l'installeur Sequoia. Ce disque-là, c'est la clé USB de 16 Go.
+- **Le Hitachi 1 To porte la sauvegarde Time Machine.** Il ne doit jamais être désigné comme
+  cible d'un effacement. Le repérer **par son nom**, `Macintosh HD` — son numéro de disque change
+  d'une session à l'autre et ne prouve rien.
 - **Ne jamais pousser `~/Inventaire/*.tsv` dans ce dépôt** : ces fichiers listent le chemin de
   183 000 fichiers personnels, et le dépôt est public.
 - Ne pas proposer d'installer Claude Code ou Claude Desktop sur l'iMac : il est sous Catalina,

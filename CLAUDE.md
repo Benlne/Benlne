@@ -75,6 +75,14 @@ puis Tailscale, SSH par clé, Claude Code.
 - Time Machine sous Catalina exige du HFS+ : il propose de reformater un disque APFS, ce n'est
   pas un défaut du disque.
 - `git` et `python3` peuvent répondre « présent » sans être installés (stubs macOS).
+- **Les numéros de disque changent d'une session à l'autre.** Le disque externe portant la
+  sauvegarde Time Machine a été vu `disk4` puis `disk2` le même jour. Toute consigne qui désigne
+  un disque par son numéro est dangereuse : identifier par le **nom du volume**, et relire
+  l'identifiant au moment d'agir.
+- **OCLP doit être installé sur le système qu'il patche, et lancé depuis lui.** Lancé depuis un
+  autre volume, `Start Root Patching` échoue sur un `FileNotFoundError` visant son assistant
+  privilégié — avec un message qui laisse croire à un problème de téléchargement de
+  `MetallibSupportPkg`.
 - **Activer SSH sur cette machine ne marche ni par la case à cocher ni par `systemsetup`.** La
   case « Session à distance » du panneau Partage reste bloquée sur « Démarrage… » sans jamais
   charger le service, et `sudo systemsetup -setremotelogin on` est refusé faute d'« Accès

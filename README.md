@@ -11,6 +11,9 @@ branche `claude/euromillion-probabilites-ijasp0`.
 | [`docs/imac-2013.md`](docs/imac-2013.md) | Fiche machine + plan pour transformer l'iMac 21,5" de fin 2013 en machine de travail allumée en permanence |
 | [`docs/sequoia-oclp.md`](docs/sequoia-oclp.md) | Procédure pas à pas : installer macOS Sequoia via OpenCore Legacy Patcher, à côté du Catalina existant |
 | [`scripts/imac-pre-sequoia.sh`](scripts/imac-pre-sequoia.sh) | Vérifications avant installation : droits, espace, clé USB, réseau, fichiers à mettre à l'abri |
+| [`docs/architecture.md`](docs/architecture.md) | Où vit quoi : le dépôt au centre, l'iMac comme nœud de calcul, le NAS comme stockage, les trois chemins d'accès |
+| [`scripts/copie-vers-nas.sh`](scripts/copie-vers-nas.sh) | Copie reprenable vers le NAS, sans permissions ni propriétaires (contrainte SMB) |
+| [`scripts/inventaire.py`](scripts/inventaire.py) | Index des fichiers de toutes les sources : où est quoi, et qu'est-ce qui existe en double |
 | [`scripts/imac-preflight.sh`](scripts/imac-preflight.sh) | État des lieux de l'iMac, en lecture seule, sans numéro de série ni UUID dans la sortie |
 | [`scripts/imac-24-7.sh`](scripts/imac-24-7.sh) | Réglages « jamais de veille, redémarre seul après coupure », en mode simulation par défaut |
 

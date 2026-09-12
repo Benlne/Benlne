@@ -83,6 +83,50 @@ Un mot pratique sur le scraping lui-même : les requêtes partiront de l'IP de l
 rythme raisonnable et le respect des limites du site ne sont pas de la politesse abstraite —
 c'est ce qui évite de faire bloquer la connexion de la maison, NAS et iPhone compris.
 
+## 3 ter. Ranger : archives par machine, données vivantes par sujet
+
+Les fichiers sont aujourd'hui éparpillés sur plusieurs appareils. L'iMac devient l'endroit qui
+sait ce qui existe et où. Deux étages, à ne pas confondre :
+
+```
+NAS/
+  Archives/
+    imac-2013-09-2026/      ← vidage figé du disque d'origine, jamais modifié
+    macbook-air-…/          ← idem pour chaque machine, à sa date
+  Actuel/
+    Photos/                 ← la donnée vivante, rangée par sujet
+    Documents/
+    Projets/
+```
+
+**Une archive se range par machine et par date ; la donnée vivante se range par sujet.** Un
+vidage d'appareil est figé, en écriture unique : il répond à « qu'y avait-il sur cette machine
+en septembre 2026 ». Ranger durablement la donnée courante par appareil, en revanche, conduit
+au même dossier Photos en quatre exemplaires sans savoir lequel fait foi. Les appareils
+changent, les sujets non.
+
+L'archive est donc une étape, pas une destination : on vide, puis on trie vers `Actuel/`, puis
+l'archive ne sert plus que de filet.
+
+### L'index, c'est ce qui fait de l'iMac un centre
+
+Savoir ce qui existe suppose un index, pas une mémoire. `scripts/inventaire.py` le construit :
+
+```bash
+python3 inventaire.py scan "/Volumes/Macintosh HD/Users" --nom imac-2013
+python3 inventaire.py scan "/Volumes/homes/benjamin" --nom nas
+python3 inventaire.py chercher "facture"
+python3 inventaire.py doublons
+```
+
+Il produit des TSV dans `~/Inventaire`, lisibles dans un tableur. Le scan ne lit pas le contenu
+des fichiers, il est donc rapide ; la recherche de doublons ne lit que les fichiers qui ont
+exactement la même taille qu'un autre, ce qui évite de parcourir tout l'inventaire. Rien n'est
+jamais supprimé : le script montre, la décision reste humaine.
+
+C'est l'outil qui rend le tri possible. Sur 268 Go venus d'une machine et un NAS déjà rempli,
+les doublons se comptent en dizaines de gigaoctets.
+
 ## 4. Les trois chemins d'accès
 
 | D'où | Comment | Pour quoi |

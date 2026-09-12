@@ -75,3 +75,14 @@ puis Tailscale, SSH par clé, Claude Code.
 - Time Machine sous Catalina exige du HFS+ : il propose de reformater un disque APFS, ce n'est
   pas un défaut du disque.
 - `git` et `python3` peuvent répondre « présent » sans être installés (stubs macOS).
+- **Activer SSH sur cette machine ne marche ni par la case à cocher ni par `systemsetup`.** La
+  case « Session à distance » du panneau Partage reste bloquée sur « Démarrage… » sans jamais
+  charger le service, et `sudo systemsetup -setremotelogin on` est refusé faute d'« Accès
+  complet au disque » pour le Terminal. Ce qui fonctionne :
+  ```bash
+  sudo launchctl enable system/com.openssh.sshd
+  sudo launchctl load -w /System/Library/LaunchDaemons/ssh.plist
+  nc -z 127.0.0.1 22 && echo "sshd écoute"
+  ```
+  Diagnostiquer en testant `127.0.0.1` avant l'adresse du réseau : cela sépare « le service ne
+  tourne pas » de « le réseau bloque ».

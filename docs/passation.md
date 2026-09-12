@@ -78,8 +78,15 @@ NAS — `nas-homes`, `nas-photo`, `nas-video`.
 conservées** : c'est là que vivent les vidéos de famille et les rushes du mariage, alors que
 `.mkv` et `.avi` ne portent ici que des téléchargements.
 
-Le scan des partages `photo` et `video` du NAS a été décisif : sans eux, 90,9 Go auraient été
-recopiés pour rien.
+**Correction — les partages `photo` et `video` n'ont jamais été indexés.** Leur montage avait
+échoué (`Racine introuvable : /Volumes/photo`) et la version du script alors utilisée acceptait
+en silence une référence inexistante. La comparaison s'est donc faite contre `nas-homes` seul
+(137 497 fichiers, 450 Go, qui contient bien l'archive `Archives IMAC/`) et `imac-actuel`.
+
+Conséquence : **aucune**, dans le sens qui compte. Une référence manquante ne peut que faire
+copier *plus* que nécessaire, jamais moins — un fichier réellement présent sur `photo` aura été
+recopié pour rien, mais rien n'a été omis. Le script refuse désormais une référence inexistante
+au lieu de l'ignorer.
 
 Reste dans ces 46,4 Go une duplication interne aux trois bibliothèques photo — le même `.mov`
 présent dans `Photos.photoslibrary`, `iPhoto.photoslibrary` et `iPhoto.migratedphotolibrary`.

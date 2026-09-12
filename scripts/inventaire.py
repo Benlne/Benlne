@@ -140,6 +140,41 @@ def chercher(motif: str) -> int:
     return 0
 
 
+def dossiers(source: str, sous: str | None, limite: int) -> int:
+    """Poids des sous-dossiers, lu dans l'index — sans retoucher au disque.
+
+    Repond a la meme question que `du -sh dossier/*`, mais instantanement et
+    autant de fois qu'on veut : l'index porte deja la taille de chaque fichier.
+    """
+    lignes = [l for l in charger() if l[3] == source]
+    if not lignes:
+        print(f"Aucun index nommé « {source} ». Voir : inventaire.py liste", file=sys.stderr)
+        return 1
+
+    if sous:
+        prefixe = sous.rstrip("/") + "/"
+        lignes = [l for l in lignes if l[2].startswith(prefixe)]
+        if not lignes:
+            print(f"Rien sous {sous} dans l'index « {source} ».", file=sys.stderr)
+            return 1
+    else:
+        prefixe = os.path.commonpath([l[2] for l in lignes]).rstrip("/") + "/"
+
+    enfants: dict[str, list[int]] = defaultdict(list)
+    for taille, _, chemin, _ in lignes:
+        reste = chemin[len(prefixe):]
+        enfants[reste.split("/")[0] if "/" in reste else reste].append(taille)
+
+    total = sum(sum(v) for v in enfants.values())
+    print(f"{prefixe.rstrip('/')} — {humain(total)}, {sum(len(v) for v in enfants.values())} fichiers\n")
+    print(f"{'volume':>12} {'fichiers':>10}  nom")
+    for nom, tailles in sorted(enfants.items(), key=lambda kv: -sum(kv[1]))[:limite]:
+        print(f"{humain(sum(tailles)):>12} {len(tailles):>10}  {nom}")
+    if len(enfants) > limite:
+        print(f"… et {len(enfants) - limite} autres entrées.")
+    return 0
+
+
 def cle(taille: int, chemin: str) -> tuple[int, str]:
     """Identite approchee d'un fichier : sa taille et son nom.
 
@@ -296,6 +331,11 @@ def main() -> int:
 
     sous.add_parser("liste", help="ce qui est indexé")
 
+    p = sous.add_parser("dossiers", help="poids des sous-dossiers, lu dans l'index")
+    p.add_argument("source", help="index à explorer, ex. imac-2013")
+    p.add_argument("--sous", help="chemin dont on veut les enfants directs")
+    p.add_argument("--limite", type=int, default=30, help="entrées affichées")
+
     p = sous.add_parser("chercher", help="retrouver un fichier par son nom")
     p.add_argument("motif")
 
@@ -319,6 +359,8 @@ def main() -> int:
         return scan(args.racine, args.nom)
     if args.commande == "liste":
         return liste()
+    if args.commande == "dossiers":
+        return dossiers(args.source, args.sous, args.limite)
     if args.commande == "chercher":
         return chercher(args.motif)
     if args.commande == "manquants":

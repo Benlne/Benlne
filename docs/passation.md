@@ -60,6 +60,33 @@ Total provisoire, avant confrontation au NAS : **~75 Go pour `laine`, ~10 Go pou
   doit impérativement être incluse dans l'index `nas`, puisqu'elle réduira d'autant la liste
   des fichiers à copier.
 
+## Le verdict de l'inventaire — 12/09/2026
+
+Quatre index confrontés : `imac-2013` (le vieux disque), `imac-actuel`, et trois partages du
+NAS — `nas-homes`, `nas-photo`, `nas-video`.
+
+| | |
+|---|---|
+| Total sur le vieux disque (`Users`) | 265,5 Go |
+| Déjà en sécurité ailleurs | **90,9 Go** — inutile de les copier |
+| Écartés volontairement | **128,2 Go** |
+| **À copier** | **46,4 Go, 6 120 fichiers** |
+
+Écarté : `/laine/Music/`, `/Dropbox/`, `/Library/`, `/Downloads/`, `/.wdc/`, `/.dropbox/`,
+`/.cache/`, `/Google Drive/`, les extensions `.mkv .avi .dmg .iso .img`, et les dossiers
+`/Film : Cinéma/` et `Torrent9`. Les extensions `.mp4` et `.mov` sont **délibérément
+conservées** : c'est là que vivent les vidéos de famille et les rushes du mariage, alors que
+`.mkv` et `.avi` ne portent ici que des téléchargements.
+
+Le scan des partages `photo` et `video` du NAS a été décisif : sans eux, 90,9 Go auraient été
+recopiés pour rien.
+
+Reste dans ces 46,4 Go une duplication interne aux trois bibliothèques photo — le même `.mov`
+présent dans `Photos.photoslibrary`, `iPhoto.photoslibrary` et `iPhoto.migratedphotolibrary`.
+On ne la traite pas maintenant : `manquants` compare la source aux références, pas la source à
+elle-même, et surtout le tri des bibliothèques photo se fera plus tard, une fois la copie en
+sécurité. Mieux vaut archiver 15 Go de trop que perdre un original référencé.
+
 ## Ce qui reste à faire, dans l'ordre
 
 1. **Indexer le NAS** — c'est la pièce manquante, sans elle `manquants` n'a rien à comparer.

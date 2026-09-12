@@ -163,11 +163,25 @@ d'albums sont illisibles. C'est une perte de rangement, réparable à froid.
 Le seul poste qui disparaît vraiment est `Library`. Si une vieille sauvegarde d'iPhone comptait,
 c'est le moment de le dire ; sinon le disque peut être formaté.
 
+## Le 1 To est devenu la cible Time Machine — 12/09/2026
+
+Le disque a été formaté et la première sauvegarde lancée. À partir de là, l'iMac a une
+sauvegarde système complète, et la phase d'installation de Sequoia peut commencer.
+
+**Le profil de risque a changé, et dans le mauvais sens.** Le Hitachi ne porte plus des données
+dupliquées ailleurs : il porte désormais **la seule sauvegarde système de la machine**. Or
+l'étape suivante consiste précisément à désigner un disque à effacer, pour y écrire l'installeur
+Sequoia.
+
+**Quand OCLP demandera sur quel disque écrire l'installeur : ce sera la clé USB de 16 Go, jamais
+le Hitachi 1 To.** Relire le nom et la taille affichés avant de valider. Une confusion à cette
+étape détruit la sauvegarde au moment précis où elle protège l'opération.
+
 ## Interdits
 
-- **Ne jamais effacer le Hitachi 1 To** avant que l'étape 4 ait été faite et constatée — c'est
-  le cas — et que la question de `Music` ait été tranchée — c'est fait, la collection est sur le
-  NAS. Les deux conditions sont levées : le formatage est autorisé, sur décision de Benjamin.
+- **Le Hitachi 1 To porte maintenant la sauvegarde Time Machine.** Il ne doit plus jamais être
+  désigné comme cible d'un effacement — en particulier pas à OCLP, qui demandera un disque pour
+  y écrire l'installeur Sequoia. Ce disque-là, c'est la clé USB de 16 Go.
 - **Ne jamais pousser `~/Inventaire/*.tsv` dans ce dépôt** : ces fichiers listent le chemin de
   183 000 fichiers personnels, et le dépôt est public.
 - Ne pas proposer d'installer Claude Code ou Claude Desktop sur l'iMac : il est sous Catalina,

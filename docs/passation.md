@@ -177,6 +177,19 @@ Sequoia.
 le Hitachi 1 To.** Relire le nom et la taille affichés avant de valider. Une confusion à cette
 étape détruit la sauvegarde au moment précis où elle protège l'opération.
 
+## Phase 2 en cours — 12/09/2026
+
+| | |
+|---|---|
+| Sauvegarde Time Machine | **faite**, `Backups.backupdb` présent sur `/Volumes/Macintosh HD` (le Hitachi, désormais en HFS+) |
+| Volume `Sequoia` | créé, `disk1s6`. Un doublon `disk1s7` a été créé par erreur puis supprimé — les deux étaient vides |
+| OpenCore Legacy Patcher 2.5.0 | installé dans `/Applications/OpenCore-Patcher.app` |
+| Clé d'installation | `INSTALLEUR`, 59 Go, HFS+ journalisé sur schéma GUID, sur `/dev/disk5` |
+| Installeur Sequoia | téléchargement en cours par OCLP |
+
+Identifiants à ne pas confondre : **`/dev/disk4` porte la sauvegarde Time Machine**, `/dev/disk5`
+est la clé d'installation.
+
 ## Interdits
 
 - **Le Hitachi 1 To porte maintenant la sauvegarde Time Machine.** Il ne doit plus jamais être

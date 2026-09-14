@@ -51,8 +51,14 @@ C'est la partie « un ordinateur à disposition de l'agent », et elle a quatre 
 4. **Les données qui ne doivent pas quitter la maison.** Tout traitement sensible s'exécute ici
    et n'en sort pas.
 
-Ce que l'iMac ne fera pas : modèles de langage en local (pas de GPU exploitable, 16 Go non
-extensibles), compilations très lourdes, et tout ce qui exige Windows.
+5. **Un petit modèle de langage en local**, pour exécuter des agents sans que les données
+   sortent ni que le plan soit consommé. Sans GPU exploitable, l'inférence se fait au
+   processeur : c'est lent, donc réservé à des tâches asynchrones. Voir
+   [`ia-locale.md`](ia-locale.md) pour ce que la machine tient réellement.
+
+Ce que l'iMac ne fera pas : servir un gros modèle de langage ou répondre de façon interactive
+(pas de GPU exploitable, 16 Go non extensibles), les compilations très lourdes, et tout ce qui
+exige Windows.
 
 ## 3 bis. NAS et iMac : le stockage d'un côté, le calcul de l'autre
 

@@ -2,7 +2,8 @@
 
 Dépôt personnel de Benjamin. Il sert aujourd'hui à une seule chose : faire de l'**iMac 21,5"
 de fin 2013** une machine de travail allumée en permanence, sur laquelle Claude Code puisse
-tourner, en attendant l'achat d'un Mac mini.
+tourner, en attendant l'achat d'un Mac mini. **C'est fait depuis le 12/09/2026** — restent les
+finitions et le premier usage réel.
 
 Le dépôt est **public** : aucun numéro de série, aucun UUID matériel, aucun secret ne doit y
 être écrit.
@@ -18,12 +19,18 @@ Le dépôt est **public** : aucun numéro de série, aucun UUID matériel, aucun
 ## La machine
 
 iMac14,1 — Core i5-4570R (Haswell, 4 cœurs, 2,7 GHz), 16 Go (maximum du modèle), SSD Samsung
-860 EVO 250 Go dont 100 Go libres, Wi-Fi seul, **macOS Catalina 10.15.8**. Compte `tonton`,
-administrateur. FileVault désactivé, SIP actif.
+860 EVO 250 Go, Wi-Fi seul. Compte `tonton`, administrateur. FileVault désactivé, SIP actif.
 
-**Le blocage central** : Claude Code exige macOS 13+, l'iMac14,1 plafonne officiellement à
-Catalina. D'où tout le reste. Ne pas proposer d'installer Claude Code ni Claude Desktop sur
-cette machine tant que Sequoia n'y est pas.
+Deux systèmes sur le SSD, et il faut savoir sur lequel on parle :
+
+| Volume | Système | Rôle |
+|---|---|---|
+| `Sequoia` | macOS Sequoia 15.7.9 (24G830), via OCLP | le système de travail, Claude Code y tourne |
+| `MACINTOSH SSD` | macOS Catalina 10.15.8 | le filet de sécurité, intact, démarrable avec alt |
+
+**Le blocage central est levé.** Claude Code exige macOS 13+ et l'iMac14,1 plafonne
+officiellement à Catalina : c'est ce qui a motivé tout le reste. OpenCore Legacy Patcher a réglé
+la question, root patches compris — accélération graphique et Wi-Fi fonctionnels.
 
 Périphériques : un Hitachi 1 To externe (le disque d'origine de la machine, encore en APFS,
 313 Go occupés dont 268 dans `Users`), et un NAS en SMB
@@ -40,14 +47,16 @@ commandes à enchaîner.** C'est le premier fichier à lire pour reprendre le tr
 
 ## Où on en est
 
-Fait : réglages d'énergie 24/7 appliqués, Command Line Tools installés, vérifications
-préalables au vert, inventaire du dossier personnel actuel.
+Fait : sauvegarde du vieux disque vers le NAS (46,4 Go réellement uniques sur 276 Go inventoriés),
+Hitachi 1 To reconverti en cible Time Machine, Sequoia installé via OCLP, root patches appliqués,
+Claude Code et Claude Desktop en service sur la machine, réglages d'énergie 24/7.
 
-En cours : inventorier le vieux disque et le NAS pour ne copier que ce qui n'existe nulle part
-ailleurs, avant de reformater le 1 To en cible Time Machine.
+En cours : donner à l'iMac ses identifiants GitHub (`scripts/imac-github.sh`) — sans quoi la
+session qui y tourne peut committer mais pas pousser, et reste donc muette pour les autres
+surfaces.
 
-Ensuite : volume APFS `Sequoia`, OpenCore Legacy Patcher 2.5.0, installation, root patches,
-puis Tailscale, SSH par clé, Claude Code.
+Ensuite : SSH par clé publique seule, Tailscale, `~/Projets` avec un `CLAUDE.md` par projet, et la
+première tâche planifiée — par `launchd`, pas `cron` : `launchd` rattrape les exécutions manquées.
 
 ## Règles de travail
 

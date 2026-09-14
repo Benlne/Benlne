@@ -250,22 +250,37 @@ par leur nom**, et vérifier l'identifiant au moment d'agir, jamais avant.
 **La clé d'installation est une Lexar de 64 Go**, pas de 16 Go comme écrit plus haut dans ce
 dépôt. Le minimum reste 16 Go ; c'est la description de l'existant qui était fausse.
 
-### Un point resté ouvert
+### Le dernier maillon : donner une voix à l'iMac
 
 La session locale a préparé un commit `4ede90f` dans `~/Benlne` sur l'iMac, mais **n'a pas pu le
-pousser** : pas d'identifiants GitHub sur cette machine. Le présent texte a donc été écrit depuis
-la session web à partir de son rapport. Configurer l'accès GitHub sur l'iMac fait partie des
-finitions.
+pousser** : pas d'identifiants GitHub sur cette machine. Tant que cela dure, l'iMac est muet pour
+la session web, qui ne lit que le dépôt — et tout ce qu'il découvre doit être recopié à la main.
 
-## Interdits## Interdits
+`scripts/imac-github.sh` règle cela avec une clé SSH au nom de la machine. Diagnostic seul par
+défaut, `--apply` pour agir :
+
+```bash
+bash scripts/imac-github.sh            # état des lieux, n'écrit rien
+bash scripts/imac-github.sh --apply    # crée la clé, règle git, bascule le remote en SSH
+```
+
+Il imprime ensuite la clé **publique** à coller sur <https://github.com/settings/ssh/new>. La clé
+privée ne sort jamais de la machine et n'est jamais affichée.
+
+Elle est créée **sans phrase de passe**, délibérément : l'iMac tourne sans personne devant et doit
+pouvoir pousser depuis une tâche planifiée. FileVault étant désactivé, une phrase rangée dans le
+trousseau ne protégerait de rien que le disque ne livre déjà. Le jour où le Mac mini prendra la
+suite avec FileVault actif, ce choix sera à refaire.
+
+## Interdits
 
 - **Le Hitachi 1 To porte la sauvegarde Time Machine.** Il ne doit jamais être désigné comme
   cible d'un effacement. Le repérer **par son nom**, `Macintosh HD` — son numéro de disque change
   d'une session à l'autre et ne prouve rien.
 - **Ne jamais pousser `~/Inventaire/*.tsv` dans ce dépôt** : ces fichiers listent le chemin de
   183 000 fichiers personnels, et le dépôt est public.
-- Ne pas proposer d'installer Claude Code ou Claude Desktop sur l'iMac : il est sous Catalina,
-  le minimum est macOS 13.
+- Ne jamais toucher au volume `MACINTOSH SSD` : c'est le Catalina d'origine, intact et
+  démarrable avec la touche alt. C'est le filet de sécurité de toute l'opération.
 - Ne rien acheter pour l'iMac.
 
 ## Pour rendre la main

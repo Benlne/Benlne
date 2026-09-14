@@ -56,19 +56,36 @@ processeur pur**, sur 4 cœurs Haswell à 2,7 GHz.
 
 **Le plafond n'est pas le processeur, c'est la mémoire.** Générer un jeton oblige à relire
 l'intégralité des poids du modèle. Avec de la DDR3L-1600 en double canal — environ 25 Go/s — le
-débit maximum se calcule directement :
+débit maximum se calcule directement. Les 16 Go ne sont pas la contrainte : un 8B quantifié en
+Q4 y tient largement.
 
-| Modèle (Q4) | Poids | Plafond théorique | Attendu en pratique |
-|---|---|---|---|
-| `llama3.2:3b` | ~2 Go | ~12 jetons/s | **5 à 7 jetons/s** |
-| `qwen3:4b` | ~2,5 Go | ~10 jetons/s | 4 à 6 jetons/s |
-| `qwen3:8b` | ~5 Go | ~5 jetons/s | **2 à 3 jetons/s** |
+### Le piège qui coûte un facteur quatre
 
-Les mesures publiées sur Mac Intel donnent 3 à 8 jetons/s en 7B ; un Haswell de 2013 est en bas
-de cette fourchette. Ces chiffres sont une estimation par la bande passante, **à remplacer par
-une mesure réelle** dès le premier modèle chargé.
+**Mesuré sur la machine le 14 septembre 2026**, et c'est le point le plus important de cette
+note :
 
-Les 16 Go ne sont pas la contrainte : un 8B quantifié en Q4 y tient largement.
+| Réglage | Débit mesuré sur `qwen3.5:4b` |
+|---|---|
+| `num_thread 4` (défaut d'Ollama) | **0,6 à 1 jeton/s** |
+| `num_thread 3` | **3,5 à 4 jetons/s** |
+
+Un quart de la vitesse, pour un réglage par défaut. La cause : Ollama voit 4 cœurs et les prend
+tous les quatre, mais **WindowServer en occupe déjà un** (relevé à 113 % de CPU). Les threads
+d'inférence se battent alors avec l'affichage, et tout s'effondre.
+
+Sur cette machine, **toujours laisser un cœur à macOS**. C'est fait dans la variante
+`qwen3.5-agent` (voir point 5) ; tout nouveau modèle tiré devra recevoir le même traitement,
+faute de quoi il paraîtra inutilisable alors qu'il ne l'est pas.
+
+### Ordres de grandeur pour les autres tailles
+
+Ces valeurs-là restent **estimées** par la bande passante, calées sur la mesure ci-dessus :
+
+| Modèle (Q4) | Poids | Attendu, avec `num_thread 3` |
+|---|---|---|
+| un 3B | ~2 Go | 4 à 6 jetons/s |
+| `qwen3.5:4b` | ~2,5 Go | **3,5 à 4 jetons/s — mesuré** |
+| un 8B | ~5 Go | 2 à 3 jetons/s |
 
 ## 4. La conséquence : des agents asynchrones, pas interactifs
 
@@ -92,17 +109,28 @@ minutes. Tout ce qui demande du raisonnement soutenu reste chez Claude.
 > **Le test** : si la tâche a besoin d'une réponse dans la minute, ou d'un enchaînement de plus
 > de trois outils, elle n'est pas pour l'iMac.
 
-## 5. Installation
+## 5. Ce qui est installé — fait le 14 septembre 2026
+
+| | |
+|---|---|
+| Moteur | **Ollama**, depuis le `.dmg` officiel notarié (binaire universel), signature vérifiée avant installation, dans `/Applications/Ollama.app` |
+| Serveur | `127.0.0.1:11434` |
+| Modèle | **`qwen3.5:4b`** — appel d'outils vérifié sur un outil factice, il le déclenche correctement |
+| Variante réglée | **`qwen3.5-agent`** — `num_thread 3`, `num_ctx 8192`, créée par Modelfile |
+
+C'est `qwen3.5-agent` qu'il faut appeler, pas le modèle nu : c'est elle qui porte le réglage à
+trois threads du point 3.
+
+Pour vérifier l'état, ou reproduire ailleurs :
 
 ```bash
-brew install ollama
-brew services start ollama          # démarre au boot, ce qu'on veut sur une machine 24/7
-ollama pull llama3.2:3b             # commencer petit, mesurer, puis monter
-ollama run llama3.2:3b --verbose    # --verbose affiche les jetons/s réels
+ollama list                        # ce qui est réellement sur le disque
+ollama ps                          # ce qui est chargé, et où
+ollama run qwen3.5-agent --verbose # --verbose affiche les jetons/s réels
 ```
 
-Commencer par le 3B et **relever la vitesse réelle** avant de tirer un 8B : c'est cette mesure,
-pas le tableau ci-dessus, qui dira quelle taille est tenable.
+Un modèle dont le nom se termine par `-cloud` ou `:cloud` n'apparaîtra quasiment pas dans
+`ollama list` : il n'y a rien de stocké, puisqu'il s'exécute ailleurs (voir point 1).
 
 ### Budget disque
 

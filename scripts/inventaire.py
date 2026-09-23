@@ -15,7 +15,11 @@ vraiment : "ou est ce fichier ?" et "qu'est-ce que j'ai en double ?".
     python3 inventaire.py manquants imac-2013 --reference nas imac-actuel \\
         --racine "/Volumes/Macintosh HD/Users" --liste-rsync ~/a-copier.txt
 
-    # 4. Doublons. --rapide compare taille et nom sans lire le contenu ;
+    # 4. Ce que contient chaque dossier : types de contenu et annees
+    python3 inventaire.py carte nas-homes --profondeur 2
+    python3 inventaire.py carte nas-homes --categorie documents
+
+    # 5. Doublons. --rapide compare taille et nom sans lire le contenu ;
     #    sans lui, le contenu est verifie, ce qui est sur mais lent en reseau.
     python3 inventaire.py doublons --rapide
 
@@ -86,6 +90,14 @@ def scan(racine: str, nom: str) -> int:
                 octets += st.st_size
                 if fichiers % 20000 == 0:
                     print(f"  {fichiers} fichiers, {humain(octets)}…", flush=True)
+
+    # Un partage SMB non monte laisse souvent un dossier vide a sa place : un
+    # index vide passerait ensuite pour une reference valide dans `manquants`.
+    if fichiers == 0:
+        os.remove(chemin_index)
+        print(f"Aucun fichier sous {racine} : partage non monté ? Index non écrit.",
+              file=sys.stderr)
+        return 1
 
     print(f"\nIndex écrit : {chemin_index}")
     print(f"  {fichiers} fichiers, {humain(octets)}, en {time.time() - debut:.0f} s")
@@ -173,6 +185,79 @@ def dossiers(source: str, sous: str | None, limite: int) -> int:
         print(f"{humain(sum(tailles)):>12} {len(tailles):>10}  {nom}")
     if len(enfants) > limite:
         print(f"… et {len(enfants) - limite} autres entrées.")
+    return 0
+
+
+CATEGORIES = {
+    "documents": {"pdf", "doc", "docx", "odt", "rtf", "txt", "md", "pages", "xls", "xlsx",
+                  "ods", "csv", "numbers", "ppt", "pptx", "odp", "key", "epub", "tex"},
+    "photos": {"jpg", "jpeg", "png", "heic", "heif", "gif", "tif", "tiff", "bmp", "webp",
+               "raw", "dng", "cr2", "cr3", "nef", "arw", "orf", "rw2", "psd"},
+    "videos": {"mp4", "mov", "m4v", "avi", "mkv", "mts", "m2ts", "3gp", "wmv", "mpg",
+               "mpeg", "vob"},
+    "musique": {"mp3", "flac", "m4a", "aac", "wav", "aif", "aiff", "ogg", "wma", "alac"},
+    "archives": {"zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "dmg", "iso", "img"},
+}
+COLONNES = [*CATEGORIES, "autre"]
+
+
+def categorie(chemin: str) -> str:
+    ext = os.path.splitext(chemin)[1][1:].lower()
+    for nom, extensions in CATEGORIES.items():
+        if ext in extensions:
+            return nom
+    return "autre"
+
+
+def carte(source: str, sous: str | None, profondeur: int, filtre: str | None,
+          limite: int) -> int:
+    """Ce que contient chaque dossier : volume par type de contenu et années couvertes.
+
+    `dossiers` dit combien pese un dossier ; `carte` dit ce qu'il y a dedans, ce
+    qui suffit a reperer ou vivent les documents, les photos, les archives.
+    """
+    lignes = [l for l in charger() if l[3] == source]
+    if not lignes:
+        print(f"Aucun index nommé « {source} ». Voir : inventaire.py liste", file=sys.stderr)
+        return 1
+    if sous:
+        prefixe = sous.rstrip("/") + "/"
+        lignes = [l for l in lignes if l[2].startswith(prefixe)]
+    else:
+        prefixe = os.path.commonpath([l[2] for l in lignes]).rstrip("/") + "/"
+    if filtre:
+        lignes = [l for l in lignes if categorie(l[2]) == filtre]
+    if not lignes:
+        print(f"Rien à cartographier dans « {source} » avec ces critères.", file=sys.stderr)
+        return 1
+
+    groupes: dict[str, dict] = {}
+    for taille, mtime, chemin, _ in lignes:
+        parties = chemin[len(prefixe):].split("/")
+        # Un fichier pose plus haut que la profondeur demandee reste a son niveau.
+        nom = "/".join(parties[:min(profondeur, len(parties) - 1)]) or "(fichiers à la racine)"
+        g = groupes.setdefault(nom, {"total": 0, "fichiers": 0, "annees": [9999, 0],
+                                     **{c: 0 for c in COLONNES}})
+        g["total"] += taille
+        g["fichiers"] += 1
+        g[categorie(chemin)] += taille
+        annee = time.localtime(mtime).tm_year
+        g["annees"] = [min(g["annees"][0], annee), max(g["annees"][1], annee)]
+
+    total = sum(g["total"] for g in groupes.values())
+    titre = prefixe.rstrip("/") + (f" — {filtre} seulement" if filtre else "")
+    print(f"{titre} — {humain(total)}, {len(lignes)} fichiers\n")
+    print(f"{'volume':>10} {'fichiers':>8} " + " ".join(f"{c:>10}" for c in COLONNES)
+          + f" {'années':>11}  dossier")
+    for nom, g in sorted(groupes.items(), key=lambda kv: -kv[1]["total"])[:limite]:
+        volumes = " ".join(f"{humain(g[c]) if g[c] else '·':>10}" for c in COLONNES)
+        a, b = g["annees"]
+        annees = str(a) if a == b else f"{a}-{b}"
+        print(f"{humain(g['total']):>10} {g['fichiers']:>8} {volumes} {annees:>11}  {nom}")
+    if len(groupes) > limite:
+        print(f"… et {len(groupes) - limite} autres dossiers.")
+    print("\nAnnées : date de dernière modification, pas de création — une copie la conserve,")
+    print("une réécriture non. Type déduit de l'extension.")
     return 0
 
 
@@ -277,8 +362,72 @@ def empreinte(chemin: str) -> str | None:
     return h.hexdigest()
 
 
-def doublons(taille_mini: int, rapide: bool) -> int:
-    lignes = [l for l in charger() if l[0] >= taille_mini]
+def recouvrements(profondeur: int, filtre: str | None, taille_mini: int, limite: int,
+                  sources: list[str] | None = None) -> int:
+    """Quels dossiers contiennent les memes fichiers, et pour quel volume.
+
+    C'est la vue qui sert au menage : elle ne dit pas « ce fichier existe deux
+    fois » mais « ces deux dossiers se recouvrent de 40 Go », ce qui designe
+    directement le dossier a examiner. Comparaison par taille et nom.
+    """
+    tout = [l for l in charger() if sources is None or l[3] in sources]
+    lignes = [l for l in tout if l[0] >= taille_mini
+              and (filtre is None or categorie(l[2]) == filtre)]
+    if not lignes:
+        print("Aucun fichier retenu avec ces critères.", file=sys.stderr)
+        return 1
+
+    # La profondeur se compte depuis la racine du partage entier, pas depuis
+    # l'ancetre commun des seuls fichiers retenus par le filtre.
+    par_source: dict[str, list[str]] = defaultdict(list)
+    for l in tout:
+        par_source[l[3]].append(os.path.dirname(l[2]))
+    racines = {s: os.path.commonpath(d).rstrip("/") + "/" for s, d in par_source.items()}
+
+    def dossier(chemin: str, source: str) -> str:
+        parties = chemin[len(racines[source]):].split("/")[:-1][:profondeur]
+        return f"[{source}] {racines[source]}{'/'.join(parties)}".rstrip("/")
+
+    par_cle: dict[tuple[int, str], list[tuple[int, int, str, str]]] = defaultdict(list)
+    for l in lignes:
+        par_cle[cle(l[0], l[2])].append(l)
+
+    paires: dict[tuple[str, str], list[int]] = defaultdict(lambda: [0, 0])
+    for groupe in par_cle.values():
+        if len(groupe) < 2:
+            continue
+        noms = sorted(dossier(l[2], l[3]) for l in groupe)
+        vues = set()
+        for i in range(len(noms)):
+            for j in range(i + 1, len(noms)):
+                if (noms[i], noms[j]) in vues:
+                    continue
+                vues.add((noms[i], noms[j]))
+                p = paires[(noms[i], noms[j])]
+                p[0] += groupe[0][0]
+                p[1] += 1
+
+    if not paires:
+        print("Aucun recouvrement.")
+        return 0
+    titre = f"{filtre} seulement, " if filtre else ""
+    print(f"Recouvrements entre dossiers — {titre}profondeur {profondeur}, "
+          f"fichiers ≥ {humain(taille_mini)}\n")
+    for (a, b), (volume, n) in sorted(paires.items(), key=lambda kv: -kv[1][0])[:limite]:
+        if a == b:
+            print(f"{humain(volume):>10} {n:>7} fichiers en double À L'INTÉRIEUR de\n"
+                  f"{'':>19}{a}\n")
+        else:
+            print(f"{humain(volume):>10} {n:>7} fichiers communs à\n{'':>19}{a}\n{'':>19}{b}\n")
+    if len(paires) > limite:
+        print(f"… et {len(paires) - limite} autres paires.")
+    print("Comparaison par taille et nom. Rien n'est supprimé : c'est une carte, pas un tri.")
+    return 0
+
+
+def doublons(taille_mini: int, rapide: bool, filtre: str | None = None) -> int:
+    lignes = [l for l in charger() if l[0] >= taille_mini
+              and (filtre is None or categorie(l[2]) == filtre)]
     if not lignes:
         print("Aucun fichier au-dessus du seuil dans les index.")
         return 1
@@ -371,6 +520,13 @@ def main() -> int:
     p.add_argument("--sous", help="chemin dont on veut les enfants directs")
     p.add_argument("--limite", type=int, default=30, help="entrées affichées")
 
+    p = sous.add_parser("carte", help="type de contenu et années de chaque dossier")
+    p.add_argument("source", help="index à cartographier, ex. nas-homes")
+    p.add_argument("--sous", help="ne cartographier que ce chemin")
+    p.add_argument("--profondeur", type=int, default=1, help="niveaux de dossiers regroupés")
+    p.add_argument("--categorie", choices=COLONNES, help="ne garder qu'un type de contenu")
+    p.add_argument("--limite", type=int, default=40, help="dossiers affichés")
+
     p = sous.add_parser("chercher", help="retrouver un fichier par son nom")
     p.add_argument("motif")
 
@@ -388,22 +544,36 @@ def main() -> int:
     p = sous.add_parser("doublons", help="fichiers présents en plusieurs exemplaires")
     p.add_argument("--rapide", action="store_true",
                    help="comparer taille et nom sans lire le contenu")
+    p.add_argument("--categorie", choices=COLONNES, help="ne garder qu'un type de contenu")
     p.add_argument("--taille-mini", type=int, default=TAILLE_MINI_DOUBLON,
                    help="ignorer les fichiers plus petits (octets)")
 
+    p = sous.add_parser("recouvrements", help="dossiers qui contiennent les mêmes fichiers")
+    p.add_argument("--profondeur", type=int, default=3, help="niveaux de dossiers comparés")
+    p.add_argument("--categorie", choices=COLONNES, help="ne garder qu'un type de contenu")
+    p.add_argument("--taille-mini", type=int, default=100_000,
+                   help="ignorer les fichiers plus petits (octets)")
+    p.add_argument("--limite", type=int, default=30, help="paires affichées")
+    p.add_argument("--sources", nargs="+", help="index à comparer (défaut : tous)")
+
     args = ap.parse_args()
+    if args.commande == "recouvrements":
+        return recouvrements(args.profondeur, args.categorie, args.taille_mini, args.limite,
+                             args.sources)
     if args.commande == "scan":
         return scan(args.racine, args.nom)
     if args.commande == "liste":
         return liste()
     if args.commande == "dossiers":
         return dossiers(args.source, args.sous, args.limite)
+    if args.commande == "carte":
+        return carte(args.source, args.sous, args.profondeur, args.categorie, args.limite)
     if args.commande == "chercher":
         return chercher(args.motif)
     if args.commande == "manquants":
         return manquants(args.source, args.reference, args.racine,
                          args.liste_rsync, args.taille_mini, args.exclure)
-    return doublons(args.taille_mini, args.rapide)
+    return doublons(args.taille_mini, args.rapide, args.categorie)
 
 
 if __name__ == "__main__":

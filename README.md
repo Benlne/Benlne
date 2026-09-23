@@ -14,6 +14,7 @@ branche `claude/euromillion-probabilites-ijasp0`.
 | [`docs/architecture.md`](docs/architecture.md) | Où vit quoi : le dépôt au centre, l'iMac comme nœud de calcul, le NAS comme stockage, les trois chemins d'accès |
 | [`scripts/copie-vers-nas.sh`](scripts/copie-vers-nas.sh) | Copie reprenable vers le NAS, sans permissions ni propriétaires (contrainte SMB) |
 | [`scripts/inventaire.py`](scripts/inventaire.py) | Index des fichiers de toutes les sources : où est quoi, et qu'est-ce qui existe en double |
+| [`scripts/inventaire-nas.sh`](scripts/inventaire-nas.sh) | Inventaire de tous les partages du NAS en une commande, résumé court à coller à Claude |
 | [`scripts/imac-preflight.sh`](scripts/imac-preflight.sh) | État des lieux de l'iMac, en lecture seule, sans numéro de série ni UUID dans la sortie |
 | [`scripts/imac-24-7.sh`](scripts/imac-24-7.sh) | Réglages « jamais de veille, redémarre seul après coupure », en mode simulation par défaut |
 

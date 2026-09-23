@@ -272,6 +272,32 @@ pouvoir pousser depuis une tâche planifiée. FileVault étant désactivé, une 
 trousseau ne protégerait de rien que le disque ne livre déjà. Le jour où le Mac mini prendra la
 suite avec FileVault actif, ce choix sera à refaire.
 
+## Reprise : cartographier tout le NAS — 23/09/2026
+
+L'index `nas-homes` existe, mais `photo` et `video` n'ont jamais été indexés. Le but est
+maintenant une carte : quel type de contenu vit où, et de quelles années.
+
+**À lancer dans le Terminal de l'iMac, sans agent** — le script ne consomme aucun token :
+
+```bash
+cd ~/Benlne && git pull && bash scripts/inventaire-nas.sh
+```
+
+Il indexe `homes`, `photo` et `video` (ou les partages passés en argument), refuse un partage
+non monté au lieu de produire un index vide, puis écrit un résumé court dans
+`~/Inventaire/carte-nas.txt`. **C'est ce fichier seul qu'on colle à Claude** (`pbcopy <
+~/Inventaire/carte-nas.txt`), jamais les `.tsv`.
+
+Pour connaître les partages qui existent : `smbutil view //NasDom._smb._tcp.local`.
+
+Pour creuser un dossier ensuite, toujours sans agent :
+
+```bash
+python3 scripts/inventaire.py carte nas-homes --sous "/Volumes/homes/benjamin/Archives IMAC" --profondeur 2
+python3 scripts/inventaire.py carte nas-photo --categorie documents
+python3 scripts/inventaire.py doublons --rapide
+```
+
 ## Interdits
 
 - **Le Hitachi 1 To porte la sauvegarde Time Machine.** Il ne doit jamais être désigné comme

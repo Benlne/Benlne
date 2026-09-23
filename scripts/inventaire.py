@@ -362,8 +362,72 @@ def empreinte(chemin: str) -> str | None:
     return h.hexdigest()
 
 
-def doublons(taille_mini: int, rapide: bool) -> int:
-    lignes = [l for l in charger() if l[0] >= taille_mini]
+def recouvrements(profondeur: int, filtre: str | None, taille_mini: int, limite: int,
+                  sources: list[str] | None = None) -> int:
+    """Quels dossiers contiennent les memes fichiers, et pour quel volume.
+
+    C'est la vue qui sert au menage : elle ne dit pas « ce fichier existe deux
+    fois » mais « ces deux dossiers se recouvrent de 40 Go », ce qui designe
+    directement le dossier a examiner. Comparaison par taille et nom.
+    """
+    tout = [l for l in charger() if sources is None or l[3] in sources]
+    lignes = [l for l in tout if l[0] >= taille_mini
+              and (filtre is None or categorie(l[2]) == filtre)]
+    if not lignes:
+        print("Aucun fichier retenu avec ces critères.", file=sys.stderr)
+        return 1
+
+    # La profondeur se compte depuis la racine du partage entier, pas depuis
+    # l'ancetre commun des seuls fichiers retenus par le filtre.
+    par_source: dict[str, list[str]] = defaultdict(list)
+    for l in tout:
+        par_source[l[3]].append(os.path.dirname(l[2]))
+    racines = {s: os.path.commonpath(d).rstrip("/") + "/" for s, d in par_source.items()}
+
+    def dossier(chemin: str, source: str) -> str:
+        parties = chemin[len(racines[source]):].split("/")[:-1][:profondeur]
+        return f"[{source}] {racines[source]}{'/'.join(parties)}".rstrip("/")
+
+    par_cle: dict[tuple[int, str], list[tuple[int, int, str, str]]] = defaultdict(list)
+    for l in lignes:
+        par_cle[cle(l[0], l[2])].append(l)
+
+    paires: dict[tuple[str, str], list[int]] = defaultdict(lambda: [0, 0])
+    for groupe in par_cle.values():
+        if len(groupe) < 2:
+            continue
+        noms = sorted(dossier(l[2], l[3]) for l in groupe)
+        vues = set()
+        for i in range(len(noms)):
+            for j in range(i + 1, len(noms)):
+                if (noms[i], noms[j]) in vues:
+                    continue
+                vues.add((noms[i], noms[j]))
+                p = paires[(noms[i], noms[j])]
+                p[0] += groupe[0][0]
+                p[1] += 1
+
+    if not paires:
+        print("Aucun recouvrement.")
+        return 0
+    titre = f"{filtre} seulement, " if filtre else ""
+    print(f"Recouvrements entre dossiers — {titre}profondeur {profondeur}, "
+          f"fichiers ≥ {humain(taille_mini)}\n")
+    for (a, b), (volume, n) in sorted(paires.items(), key=lambda kv: -kv[1][0])[:limite]:
+        if a == b:
+            print(f"{humain(volume):>10} {n:>7} fichiers en double À L'INTÉRIEUR de\n"
+                  f"{'':>19}{a}\n")
+        else:
+            print(f"{humain(volume):>10} {n:>7} fichiers communs à\n{'':>19}{a}\n{'':>19}{b}\n")
+    if len(paires) > limite:
+        print(f"… et {len(paires) - limite} autres paires.")
+    print("Comparaison par taille et nom. Rien n'est supprimé : c'est une carte, pas un tri.")
+    return 0
+
+
+def doublons(taille_mini: int, rapide: bool, filtre: str | None = None) -> int:
+    lignes = [l for l in charger() if l[0] >= taille_mini
+              and (filtre is None or categorie(l[2]) == filtre)]
     if not lignes:
         print("Aucun fichier au-dessus du seuil dans les index.")
         return 1
@@ -480,10 +544,22 @@ def main() -> int:
     p = sous.add_parser("doublons", help="fichiers présents en plusieurs exemplaires")
     p.add_argument("--rapide", action="store_true",
                    help="comparer taille et nom sans lire le contenu")
+    p.add_argument("--categorie", choices=COLONNES, help="ne garder qu'un type de contenu")
     p.add_argument("--taille-mini", type=int, default=TAILLE_MINI_DOUBLON,
                    help="ignorer les fichiers plus petits (octets)")
 
+    p = sous.add_parser("recouvrements", help="dossiers qui contiennent les mêmes fichiers")
+    p.add_argument("--profondeur", type=int, default=3, help="niveaux de dossiers comparés")
+    p.add_argument("--categorie", choices=COLONNES, help="ne garder qu'un type de contenu")
+    p.add_argument("--taille-mini", type=int, default=100_000,
+                   help="ignorer les fichiers plus petits (octets)")
+    p.add_argument("--limite", type=int, default=30, help="paires affichées")
+    p.add_argument("--sources", nargs="+", help="index à comparer (défaut : tous)")
+
     args = ap.parse_args()
+    if args.commande == "recouvrements":
+        return recouvrements(args.profondeur, args.categorie, args.taille_mini, args.limite,
+                             args.sources)
     if args.commande == "scan":
         return scan(args.racine, args.nom)
     if args.commande == "liste":
@@ -497,7 +573,7 @@ def main() -> int:
     if args.commande == "manquants":
         return manquants(args.source, args.reference, args.racine,
                          args.liste_rsync, args.taille_mini, args.exclure)
-    return doublons(args.taille_mini, args.rapide)
+    return doublons(args.taille_mini, args.rapide, args.categorie)
 
 
 if __name__ == "__main__":

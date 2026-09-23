@@ -283,9 +283,11 @@ maintenant une carte : quel type de contenu vit où, et de quelles années.
 cd ~/Benlne && git pull && bash scripts/inventaire-nas.sh
 ```
 
-Il indexe `homes`, `photo` et `video` (ou les partages passés en argument), refuse un partage
-non monté au lieu de produire un index vide, puis écrit un résumé court dans
-`~/Inventaire/carte-nas.txt`. **C'est ce fichier seul qu'on colle à Claude** (`pbcopy <
+Il indexe `homes`, `photo`, `video` et `music` (ou les partages passés en argument), refuse un
+partage non monté au lieu de produire un index vide, puis écrit un résumé court dans
+`~/Inventaire/carte-nas.txt`, orienté ménage : où vivent les photos et la musique, et quels
+dossiers se recouvrent (`inventaire.py recouvrements`). `--analyse` refait le résumé à partir
+des index existants, sans rescanner. **C'est ce fichier seul qu'on colle à Claude** (`pbcopy <
 ~/Inventaire/carte-nas.txt`), jamais les `.tsv`.
 
 Pour connaître les partages qui existent : `smbutil view //NasDom._smb._tcp.local`.
